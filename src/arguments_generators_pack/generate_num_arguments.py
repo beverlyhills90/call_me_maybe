@@ -13,7 +13,7 @@ class STATE(Enum):
     END_NUMS = 4
 
 
-def number_generate(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param:str, is_last:bool) -> list[int]:
+def number_generate(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param:str, is_last:bool,user_request:str) -> list[int]:
     has_dot:bool = False
     
     res = []

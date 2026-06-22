@@ -4,11 +4,9 @@ from pydantic import Field, BaseModel
 import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from llm_sdk import Small_LLM_Model
-import json_parsing as jp
-from arguments_generators_pack import number_generate,str_generator
-import dotenv
+import src.json_parsing as jp
+from src.arguments_generators_pack import number_generate,str_generator
 
-dotenv.load_dotenv()
 
 
 
@@ -24,23 +22,43 @@ User request: "{user_request}"
 The value of "{arg_name}" is: """
 
 ARGUMENT_PROMPT_TEMPLATE_STR = """
-Extract the exact value for the parameter from the user request.
-If the parameter is a symbol, translate the word to the character (e.g., "asterisks" -> "*", "dashes" -> "-").
+You are a precise data extraction subroutine. Your task is to look at the "User Request", find the data that matches the "Description" of the requested parameter, and output ONLY that value.
 
-Example 1:
-User request: "Replace spaces with dashes"
-Parameter: "replacement"
-Value: "-"
+CRITICAL RULES:
+1. If the requested value is a punctuation mark or special character named as a word (e.g., "asterisks", "dashes", "dots", "slashes"), you MUST output the actual literal symbol (e.g., "*", "-", ".", "/"), NOT the word.
+2. If the user request implies an empty value or empty string (e.g., '', ""), do not invent characters. Output NOTHING inside the quotes.
+3. Output ONLY the raw extracted value inside double quotes. Do not repeat the parameter name, do not write "Value:", do not add explanations.
 
-Example 2:
-User request: "Find all digits in text"
-Parameter: "regex"
-Value: "\\d+"
+---
+### EXAMPLES OF EXTRACTION ###
 
-Task:
+Requested Parameter: "recipient_email"
+Description: The email address to send the message to.
+User request: "Send an urgent email to boss@company.com saying I will be late"
+[RESULT]: "boss@company.com"
+
+Requested Parameter: "separator"
+Description: The character used to split the text.
+User request: "Split the string by dashes"
+[RESULT]: "-"
+
+Requested Parameter: "text_to_reverse"
+Description: The original string that needs to be reversed.
+User request: "Reverse the string ''"
+[RESULT]: ""
+
+Requested Parameter: "count"
+Description: How many times to repeat.
+User request: "Print 'Hello' 5 times"
+[RESULT]: "5"
+
+---
+### CURRENT TASK ###
+Requested Parameter: "{arg_name}"
+Description: {parameters_description}
 User request: "{user_request}"
-Parameter: "{arg_name}"
-Value: \""""
+
+[RESULT]: \""""
 
 arguments_types_machine = {
     "number":number_generate,
@@ -124,7 +142,7 @@ def arguments_generator(small_llm:"Small_LLM_Model",arguments_list:list[tuple],f
             function_description=function_desc[1],parameters_description=all_args_str,user_request=user_req)
         promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = (arg == arguments_list[-1])
-        param_tokens = generator_func(small_llm,promt_for_selector,arg_name,is_last)
+        param_tokens = generator_func(small_llm,promt_for_selector,arg_name,is_last,user_req)
         result.extend(param_tokens)
     return result
 
@@ -163,7 +181,7 @@ def main():
     func_list = jp.parsing_name_desc()#all func names and desc
     all_funcs_names = [name[0] for name in func_list] #func names for trie
     prefix_trie = Trie.to_trie(all_funcs_names,small_llm)
-    ur = "Replace all vowels in 'Programming is fun' with asterisks" #user input
+    ur = "Reverse the string ' '" #user input
     function_name = small_llm.decode(name_generator(prefix_trie,small_llm,func_promt_generator(small_llm,func_list,ur)))
     print(function_name)
     parametrs_for_func = jp.arg_type(function_name)
