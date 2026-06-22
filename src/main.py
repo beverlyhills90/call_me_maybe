@@ -28,7 +28,7 @@ arg_prompt = f"""
 
 
 
-arguments_promt_num = f"""
+arguments_promt_str = f"""
     You are a function calling assistant. Generate the arguments for the 
     function below based on the user request.
 
@@ -41,18 +41,29 @@ arguments_promt_num = f"""
 
     Generate the JSON arguments:
     """
-arguments_promt_str = f"""
-You are a function calling assistant. Extract the value for a specific parameter.
 
-Function: fn_reverse_string
-Description: Reverse a string and return the reversed result.
-Parameters:
-- s (string): the string to reverse
+ARGUMENT_PROMPT_TEMPLATE_NUM = """
+Extract parameter "{name_param}" from the user request.
 
-User request: "Reverse the string 'hello'"
+Example: For request "What is the sum of 10 and 5?":
+- a = 10
+- b = 5
 
-What is the value of parameter "s"? It should be exactly the string from the user request.
-Answer with only the string value, no explanation:
+User request: "{user_request}"
+
+The value of "{name_param}" is: """
+
+ARGUMENT_PROMPT_TEMPLATE_STR= """
+Extract parameter "{arg_name}" from the user request.
+
+Example: For request "Replace all 'cat' with 'dog' in 'cat is here'":
+- source_string = "cat is here"
+- regex = "cat"  
+- replacement = "dog"
+
+User request: "Replace all 'hello' with 'world' in 'hello world'"
+
+The value of "{arg_name}" is: \"
 """
 
 all_funcs = ["fn_add_numbers","fn_greet","fn_reverse_string","fn_get_square_root","fn_substitute_string_with_regex"]
@@ -116,15 +127,15 @@ def name_selector(prefix_trie:"Trie", small_llm:"Small_LLM_Model", promt_tokenst
 
 #wraper for arguments
 def arguments_generator(small_llm:"Small_LLM_Model",arguments_list:list[tuple]) -> list[int]:
-    promt_for_args = small_llm.encode(arguments_promt_str)[0].tolist()
     result = []
     result.append(small_llm.encode("{")[0][0].item())
     for arg in arguments_list:
-        param_name, param_type = arg
+        arg_name, param_type = arg
         generator_func = finite_state_machine[param_type]
-        print(generator_func)
+        arguments_promt_str = ARGUMENT_PROMPT_TEMPLATE_STR.format(arg_name=arg_name)
+        promt_for_args = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = (arg == arguments_list[-1])
-        param_tokens = generator_func(small_llm,promt_for_args,param_name,is_last)
+        param_tokens = generator_func(small_llm,promt_for_args,arg_name,is_last)
         result.extend(param_tokens)
     return result
 
@@ -134,9 +145,10 @@ def main():
     small_llm = Small_LLM_Model()
     prefix_trie = Trie.to_trie(all_funcs,small_llm)
     promt_tokens = small_llm.encode(arg_prompt)[0].tolist()
-    function_name = small_llm.decode(name_selector(prefix_trie,small_llm,promt_tokens))
+    function_name = "fn_substitute_string_with_regex" #small_llm.decode(name_selector(prefix_trie,small_llm,promt_tokens))
     parametrs_for_func = jp.parametr_type(function_name)
     res = arguments_generator(small_llm,parametrs_for_func)
+   
     print(small_llm.decode(res))
    
 
