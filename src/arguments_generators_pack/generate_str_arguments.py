@@ -4,20 +4,18 @@ import numpy as np
 from enum import Enum
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from llm_sdk import Small_LLM_Model
-from pathlib import Path
 import json
 
 class STATE(Enum):
     START_STR = 0
-    JUST_SIMBOLS = 2
-    END_STR = 3
-    AFTER_STR = 4
+    JUST_SIMBOLS = 1
+    END_STR = 2
+    AFTER_STR = 3
 
 
-def get_vocab_list():
-    current_dir = Path(__file__).resolve().parent
+def get_vocab_list(small_llm:"Small_LLM_Model"):
     
-    json_path = current_dir.parent.parent / "vocab.json"
+    json_path = small_llm.get_path_to_vocab_file()
     with open(json_path, 'r', encoding='utf-8') as file:
         data = json.load(file)
     res = []
@@ -33,7 +31,7 @@ def str_generator(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param
     res.extend(name_tokens)
     promt_tokenst.extend(name_tokens)
     state = STATE.START_STR
-    vocab = get_vocab_list()
+    vocab = get_vocab_list(small_llm)
     string_allowed_ids = [id for token, id in vocab.items() if '"' not in token]
     quote_id = vocab['"']
 
@@ -59,10 +57,11 @@ def str_generator(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param
         res.append(next_token_id)
 
         decoded = small_llm.decode(next_token_id)
+        print(decoded)
         if  state == STATE.START_STR:
             state = STATE.JUST_SIMBOLS
         elif state == STATE.JUST_SIMBOLS:
-            if '"' in decoded:
+            if next_token_id == quote_id:
                 state = STATE.AFTER_STR
         elif state == STATE.AFTER_STR:
             state = STATE.END_STR

@@ -47,7 +47,6 @@ def number_generate(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_par
         res.append(next_token_id)
 
         decoded = small_llm.decode(next_token_id)
-        print(decoded)
         if small_llm.decode(next_token_id) == ".":
             has_dot = True
         if state == STATE.START_NUMS:

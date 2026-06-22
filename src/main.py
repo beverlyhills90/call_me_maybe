@@ -10,68 +10,48 @@ import dotenv
 
 dotenv.load_dotenv()
 
-arg_prompt = f"""
 
-    You must choose exactly one function from the list below that best matches the user request.
-
-    Available functions:
-    - fn_add_numbers: Add two numbers together and return their sum.
-    - fn_greet: Generate a greeting message for a person by name.
-    - fn_reverse_string: Reverse a string and return the reversed result.
-    - fn_get_square_root:Calculate the square root of a number
-    - fn_substitute_string_with_regex: Replace all occurrences matching a regex pattern in a string.
-
-    User request:  "Reverse the string 'hello'"
-
-    Answer with only the function name.
-    """
-
-
-
-arguments_promt_str = f"""
-    You are a function calling assistant. Generate the arguments for the 
-    function below based on the user request.
-
-    Function: fn_reverse_string
-    Description: Reverse a string and return the reversed result.
-    Parameters:
-    - s (string)
-
-    User request: "Reverse the string 'hello'"
-
-    Generate the JSON arguments:
-    """
 
 ARGUMENT_PROMPT_TEMPLATE_NUM = """
-Extract parameter "{name_param}" from the user request.
+Extract parameter "{arg_name}" from the user request.
 
-Example: For request "What is the sum of 10 and 5?":
-- a = 10
-- b = 5
+Function: {function_name}
+Description: {function_description}
+Parameters: {parameters_description}
 
 User request: "{user_request}"
 
-The value of "{name_param}" is: """
+The value of "{arg_name}" is: """
 
-ARGUMENT_PROMPT_TEMPLATE_STR= """
-Extract parameter "{arg_name}" from the user request.
+ARGUMENT_PROMPT_TEMPLATE_STR = """
+Extract the exact value for the parameter from the user request.
+If the parameter is a symbol, translate the word to the character (e.g., "asterisks" -> "*", "dashes" -> "-").
 
-Example: For request "Replace all 'cat' with 'dog' in 'cat is here'":
-- source_string = "cat is here"
-- regex = "cat"  
-- replacement = "dog"
+Example 1:
+User request: "Replace spaces with dashes"
+Parameter: "replacement"
+Value: "-"
 
-User request: "Replace all 'hello' with 'world' in 'hello world'"
+Example 2:
+User request: "Find all digits in text"
+Parameter: "regex"
+Value: "\\d+"
 
-The value of "{arg_name}" is: \"
-"""
+Task:
+User request: "{user_request}"
+Parameter: "{arg_name}"
+Value: \""""
 
-all_funcs = ["fn_add_numbers","fn_greet","fn_reverse_string","fn_get_square_root","fn_substitute_string_with_regex"]
-
-finite_state_machine = {
+arguments_types_machine = {
     "number":number_generate,
     "string":str_generator,
 }
+arguments_types_promts = {
+    "number":ARGUMENT_PROMPT_TEMPLATE_NUM,
+    "string":ARGUMENT_PROMPT_TEMPLATE_STR,
+}
+
+
 
 class Node(BaseModel):
     children: dict[int, "Node"] = Field(default_factory=dict)
@@ -108,7 +88,7 @@ class Trie(BaseModel):
 
 
 #function Name Generator
-def name_selector(prefix_trie:"Trie", small_llm:"Small_LLM_Model", promt_tokenst:list[int]) -> str:
+def name_generator(prefix_trie:"Trie", small_llm:"Small_LLM_Model", promt_tokenst:list[int]) -> str:
     node = prefix_trie.root
     res = []
 
@@ -126,30 +106,71 @@ def name_selector(prefix_trie:"Trie", small_llm:"Small_LLM_Model", promt_tokenst
 
 
 #wraper for arguments
-def arguments_generator(small_llm:"Small_LLM_Model",arguments_list:list[tuple]) -> list[int]:
+def arguments_generator(small_llm:"Small_LLM_Model",arguments_list:list[tuple],function_desc,user_req:str) -> list[int]:
     result = []
     result.append(small_llm.encode("{")[0][0].item())
+
+    lines = []
     for arg in arguments_list:
-        arg_name, param_type = arg
-        generator_func = finite_state_machine[param_type]
-        arguments_promt_str = ARGUMENT_PROMPT_TEMPLATE_STR.format(arg_name=arg_name)
-        promt_for_args = small_llm.encode(arguments_promt_str)[0].tolist()
+        lines.append(f"{arg[0]}:{arg[1]}")
+    all_args_str = "\n".join(lines)
+
+    for arg in arguments_list:
+        arg_name, arg_type = arg
+        promt_for_arg = arguments_types_promts[arg_type]
+        generator_func = arguments_types_machine[arg_type]
+
+        arguments_promt_str = promt_for_arg.format(arg_name=arg_name,function_name=function_desc[0],
+            function_description=function_desc[1],parameters_description=all_args_str,user_request=user_req)
+        promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = (arg == arguments_list[-1])
-        param_tokens = generator_func(small_llm,promt_for_args,arg_name,is_last)
+        param_tokens = generator_func(small_llm,promt_for_selector,arg_name,is_last)
         result.extend(param_tokens)
     return result
 
 
+def func_promt_generator(small_llm:"Small_LLM_Model",func_list:list[tuple],user_request:str):
+    FUNCTION_CHOOSE_TEMPLATE = """
+
+    You must choose exactly one function from the list below that best matches the user request.
+
+    Available functions:
+    {func_name_desc}
+
+    User request: {user_request}
+
+    Answer with only the function name.
+    """
+
+    lines = []
+    for func in func_list:
+        lines.append(f"{func[0]}:{func[1]}")
+    all_functions_str = "\n".join(lines)
+    full_prompt_str = FUNCTION_CHOOSE_TEMPLATE.format(func_name_desc=all_functions_str,user_request=user_request)
+    tokens = small_llm.encode(full_prompt_str)[0].tolist()
+    return tokens
+
+
+
+def func_desc(function_name:str,func_list:list[tuple]) -> tuple | None:
+    for func in func_list:
+        if func[0] == function_name:
+            return func
+    return None
 
 def main():
     small_llm = Small_LLM_Model()
-    prefix_trie = Trie.to_trie(all_funcs,small_llm)
-    promt_tokens = small_llm.encode(arg_prompt)[0].tolist()
-    function_name = "fn_substitute_string_with_regex" #small_llm.decode(name_selector(prefix_trie,small_llm,promt_tokens))
-    parametrs_for_func = jp.parametr_type(function_name)
-    res = arguments_generator(small_llm,parametrs_for_func)
+    func_list = jp.parsing_name_desc()#all func names and desc
+    all_funcs_names = [name[0] for name in func_list] #func names for trie
+    prefix_trie = Trie.to_trie(all_funcs_names,small_llm)
+    ur = "Replace all vowels in 'Programming is fun' with asterisks" #user input
+    function_name = small_llm.decode(name_generator(prefix_trie,small_llm,func_promt_generator(small_llm,func_list,ur)))
+    print(function_name)
+    parametrs_for_func = jp.arg_type(function_name)
+    function_and_description = func_desc(function_name,func_list)
+    args = arguments_generator(small_llm,parametrs_for_func,function_and_description,ur)
    
-    print(small_llm.decode(res))
+    print(small_llm.decode(args))
    
 
     
