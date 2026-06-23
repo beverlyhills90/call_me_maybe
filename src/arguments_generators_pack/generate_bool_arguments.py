@@ -44,8 +44,9 @@ class Trie(BaseModel):
         return trie
 
 
-def get_vocab_list(small_llm: "Small_LLM_Model"):
-
+def get_vocab_list(small_llm: "Small_LLM_Model") -> list:
+    """Get vocab list from vocab.json
+    """
     json_path = small_llm.get_path_to_vocab_file()
     with open(json_path, "r", encoding="utf-8") as file:
         data = json.load(file)
@@ -53,11 +54,12 @@ def get_vocab_list(small_llm: "Small_LLM_Model"):
     return data
 
 
-def softmax(x: Any, axis=-1):
-    x_max = np.max(x, axis=axis, keepdims=True)
+def softmax(x: Any):
+    """softmax"""
+    x_max = np.max(x, keepdims=True)
     exp_x = np.exp(x - x_max)
 
-    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)
+    return exp_x / np.sum(exp_x, keepdims=True)
 
 
 def bool_generate(
@@ -65,10 +67,17 @@ def bool_generate(
     promt_tokenst: list[int],
     name_param: str,
     is_last: bool,
-    user_request: str,
 ) -> list[int]:
     has_dot: bool = False
+    """Generation of bool arguments
+    ARGS:
 
+    small_llm -
+    promt_tokenst -
+    name_param - 
+    is_last - boolean
+    user_request -
+    """
     res = []
 
     formatted_name = f'"{name_param}":'

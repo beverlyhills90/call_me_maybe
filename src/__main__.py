@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 import src.json_part as jp
 from src.arguments_generators_pack import number_generate, str_generator, bool_generate
-from src.cli_parsing import cli_parsing_main, CliExeption
+from src.cli_parsing import cli_parsing_main, CLIExeption
 
 ARGUMENT_PROMPT_TEMPLATE_NUM = """You are a precise data extraction subsystem. Your task is to extract the EXACT value for the parameter "{arg_name}" from the user request and format it strictly as a JSON field.
 
@@ -230,7 +230,7 @@ def arguments_generator(
             try:
                 promt_for_arg = arguments_types_promts[arg_type]
             except KeyError as e:
-                print(f"{e}:We not support this datatype")
+                print(f"{e}:We don't support this data type")
                 continue
         arguments_promt_str = promt_for_arg.format(
             arg_name=arg_name,
@@ -242,7 +242,7 @@ def arguments_generator(
         promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = arg == arguments_list[-1]
         param_tokens = generator_func(
-            small_llm, promt_for_selector, arg_name, is_last, user_req
+            small_llm, promt_for_selector, arg_name, is_last
         )
         result.extend(param_tokens)
     return result
@@ -293,7 +293,7 @@ def from_dict_to_list(target_dict: dict):
 def main() -> None:
     try:
         cli = cli_parsing_main()
-    except CliExeption as e:
+    except CLIExeption as e:
         print(f"Somtehing wrong with arguments: {e}")
         return
     small_llm = Small_LLM_Model()

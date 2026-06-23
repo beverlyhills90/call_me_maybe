@@ -3,12 +3,16 @@ from pathlib import Path
 from typing import Any
 
 
-class CliExeption(Exception):
+class CLIExeption(Exception):
     def __init__(self, msg):
         super().__init__(msg)
 
 
 def cli_parsing_main() -> Any:
+    """CLI arguments parsing
+
+    raises CLIExeption
+    """
     parser = argparse.ArgumentParser(
         prog="ProgramName",
         description="What the program does",
@@ -31,16 +35,16 @@ def cli_parsing_main() -> Any:
 
     args = parser.parse_args()
     if len(vars(args)) > 3:
-        raise CliExeption("Need something more")
+        raise CLIExeption("Need something more")
     elif len(vars(args)) < 3:
-        raise CliExeption("Too much args")
+        raise CLIExeption("Too much args")
 
     for name, value in vars(args).items():
         if value is None:
-            raise CliExeption(f"Argument -{name} is missing!")
+            raise CLIExeption(f"Argument -{name} is missing!")
             return
 
         str_value = str(value)
         if not str_value.endswith(".json"):
-            raise CliExeption(f"-{name}={value} is not a json file")
+            raise CLIExeption(f"-{name}={value} is not a json file")
     return args

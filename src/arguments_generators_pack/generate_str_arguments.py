@@ -17,7 +17,8 @@ class STATE(Enum):
 
 
 def get_vocab_list(small_llm: "Small_LLM_Model"):
-
+    """Get vocab list from vocab.json
+    """
     json_path = small_llm.get_path_to_vocab_file()
     with open(json_path, "r", encoding="utf-8") as file:
         data = json.load(file)
@@ -26,6 +27,7 @@ def get_vocab_list(small_llm: "Small_LLM_Model"):
 
 
 def softmax(x: Any):
+    """softmax"""
     x_max = np.max(x)
     exp_x = np.exp(x - x_max)
     return exp_x / np.sum(exp_x)
@@ -35,8 +37,7 @@ def str_generator(
     small_llm: "Small_LLM_Model",
     promt_tokenst: list[int],
     name_param: str,
-    is_last: bool,
-    user_request: str,
+    is_last: bool
 ) -> list[int]:
     res = []
 
