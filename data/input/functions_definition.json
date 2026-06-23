@@ -67,5 +67,20 @@
     "returns": {
       "type": "string"
     }
+  },
+  {
+    "name": "fn_toggle_feature",
+    "description": "Enable or disable a specific system feature based on user choice.",
+    "parameters": {
+      "feature_name": {
+        "type": "string"
+      },
+      "enable": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "string"
+    }
   }
 ]

@@ -1,7 +1,7 @@
-
 import argparse
 from pathlib import Path
 from typing import Any
+
 
 class CliExeption(Exception):
     def __init__(self, msg):
@@ -10,21 +10,32 @@ class CliExeption(Exception):
 
 def cli_parsing_main() -> Any:
     parser = argparse.ArgumentParser(
-                    prog='ProgramName',
-                    description='What the program does',
-                    epilog='Text at the bottom of help')
-    
-    parser.add_argument('-functions_definition')
-    parser.add_argument('-input')
-    parser.add_argument('-output')
+        prog="ProgramName",
+        description="What the program does",
+        epilog="Text at the bottom of help",
+    )
+
+    parser.add_argument(
+        "--functions_definition",
+        "-f",
+        type=Path,
+        required=True,
+        help="Путь к файлу определений функций",
+    )
+    parser.add_argument(
+        "--input", "-i", type=Path, required=True, help="Путь к входному файлу"
+    )
+    parser.add_argument(
+        "--output", "-o", type=Path, required=True, help="Путь к выходному JSON файлу"
+    )
 
     args = parser.parse_args()
     if len(vars(args)) > 3:
-        raise  CliExeption("Need something more")
+        raise CliExeption("Need something more")
     elif len(vars(args)) < 3:
-        raise  CliExeption("Too much args")
-    
-    for name,value in vars(args).items():
+        raise CliExeption("Too much args")
+
+    for name, value in vars(args).items():
         if value is None:
             raise CliExeption(f"Argument -{name} is missing!")
             return
