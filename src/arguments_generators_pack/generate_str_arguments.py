@@ -32,20 +32,17 @@ def str_generator(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param
     promt_tokenst.extend(name_tokens)
     vocab = get_vocab_list(small_llm)
     quote_id = vocab['"']
-    escaped_quote_id = vocab.get('\\"')
     string_allowed_ids = [
         id for token, id in vocab.items() 
-        if '"' not in token and id != quote_id and id != escaped_quote_id
+        if '"' not in token
     ]
     
     term = '}' if is_last else ','
-    is_empty_request = "''" in user_request or '""' or "' '" or '" "' in user_request
 
     state = STATE.JUST_SIMBOLS
     while state != STATE.END_STR:
         allowed_tokenids = []
         if state == STATE.JUST_SIMBOLS:
-            
             allowed_tokenids = string_allowed_ids + [quote_id]
         elif state == STATE.AFTER_STR:
             allowed_tokenids = [small_llm.encode(term)[0][0].item()]
@@ -63,7 +60,7 @@ def str_generator(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param
         decoded = small_llm.decode(next_token_id)
 
 
-        print(decoded)
+        #print(decoded)
 
         if state == STATE.JUST_SIMBOLS:
             if next_token_id == quote_id:

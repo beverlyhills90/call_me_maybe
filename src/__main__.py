@@ -1,10 +1,10 @@
 import os
 import sys
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel,model_validator
 import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from llm_sdk import Small_LLM_Model
-import src.json_parsing as jp
+import src.json_part as jp
 from src.arguments_generators_pack import number_generate,str_generator
 
 
@@ -22,43 +22,45 @@ User request: "{user_request}"
 The value of "{arg_name}" is: """
 
 ARGUMENT_PROMPT_TEMPLATE_STR = """
-You are a precise data extraction subroutine. Your task is to look at the "User Request", find the data that matches the "Description" of the requested parameter, and output ONLY that value.
+You are a precise data extraction subroutine.
 
-CRITICAL RULES:
-1. If the requested value is a punctuation mark or special character named as a word (e.g., "asterisks", "dashes", "dots", "slashes"), you MUST output the actual literal symbol (e.g., "*", "-", ".", "/"), NOT the word.
-2. If the user request implies an empty value or empty string (e.g., '', ""), do not invent characters. Output NOTHING inside the quotes.
-3. Output ONLY the raw extracted value inside double quotes. Do not repeat the parameter name, do not write "Value:", do not add explanations.
+Extract the value of parameter "{arg_name}" from the user request.
 
----
-### EXAMPLES OF EXTRACTION ###
+Function: {function_name}
+Description: {function_description}
 
-Requested Parameter: "recipient_email"
-Description: The email address to send the message to.
-User request: "Send an urgent email to boss@company.com saying I will be late"
-[RESULT]: "boss@company.com"
+Example:
+Request: "Reverse the string 'hello'"
+- s = "hello"
 
-Requested Parameter: "separator"
-Description: The character used to split the text.
-User request: "Split the string by dashes"
-[RESULT]: "-"
-
-Requested Parameter: "text_to_reverse"
-Description: The original string that needs to be reversed.
-User request: "Reverse the string ''"
-[RESULT]: ""
-
-Requested Parameter: "count"
-Description: How many times to repeat.
-User request: "Print 'Hello' 5 times"
-[RESULT]: "5"
-
----
-### CURRENT TASK ###
-Requested Parameter: "{arg_name}"
-Description: {parameters_description}
 User request: "{user_request}"
 
-[RESULT]: \""""
+The value of "{arg_name}" is: \"
+"""
+
+ARGUMENT_PROMPT_TEMPLATE_STR_REGEX = """
+You are a precise data extraction subroutine for a regex substitution function.
+
+The function replaces all occurrences of a pattern in a string.
+- source_string: the ORIGINAL string to search in (the full text)
+- regex: the PATTERN/WORD to find and replace
+- replacement: the EXACT NEW string to replace matches with (could be a word, symbol, or empty)
+
+Examples:
+Request: "Replace all 'cat' with 'dog' in 'the cat sat'"
+- source_string = "the cat sat"
+- regex = "cat"
+- replacement = "dog"
+
+Request: "Replace all vowels in 'hello' with ASTERISKS"
+- source_string = "hello"
+- regex = "vowels"
+- replacement = "ASTERISKS"
+
+User request: "{user_request}"
+
+The value of "{arg_name}" is: \"
+"""
 
 arguments_types_machine = {
     "number":number_generate,
@@ -68,6 +70,7 @@ arguments_types_promts = {
     "number":ARGUMENT_PROMPT_TEMPLATE_NUM,
     "string":ARGUMENT_PROMPT_TEMPLATE_STR,
 }
+
 
 
 
@@ -135,9 +138,12 @@ def arguments_generator(small_llm:"Small_LLM_Model",arguments_list:list[tuple],f
 
     for arg in arguments_list:
         arg_name, arg_type = arg
-        promt_for_arg = arguments_types_promts[arg_type]
+        
         generator_func = arguments_types_machine[arg_type]
-
+        if "regex" in function_desc[0]:
+            promt_for_arg = ARGUMENT_PROMPT_TEMPLATE_STR_REGEX
+        else:
+            promt_for_arg = arguments_types_promts[arg_type]
         arguments_promt_str = promt_for_arg.format(arg_name=arg_name,function_name=function_desc[0],
             function_description=function_desc[1],parameters_description=all_args_str,user_request=user_req)
         promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
@@ -169,26 +175,37 @@ def func_promt_generator(small_llm:"Small_LLM_Model",func_list:list[tuple],user_
     return tokens
 
 
-
-def func_desc(function_name:str,func_list:list[tuple]) -> tuple | None:
-    for func in func_list:
-        if func[0] == function_name:
-            return func
-    return None
+def from_dict_to_list(target_dict:dict):
+    res = []
+    for item,value in target_dict.items():
+        param_type = value.get("type")
+        res.append((item,param_type))
+    return res
 
 def main():
     small_llm = Small_LLM_Model()
-    func_list = jp.parsing_name_desc()#all func names and desc
-    all_funcs_names = [name[0] for name in func_list] #func names for trie
+    func_list:jp.Function = jp.list_objects()
+    all_funcs_names = [obj.name for obj in func_list]
+    func_descriptions = [obj.description for obj in func_list]
+    func_tuples = list(zip(all_funcs_names, func_descriptions))
     prefix_trie = Trie.to_trie(all_funcs_names,small_llm)
-    ur = "Reverse the string ' '" #user input
-    function_name = small_llm.decode(name_generator(prefix_trie,small_llm,func_promt_generator(small_llm,func_list,ur)))
-    print(function_name)
-    parametrs_for_func = jp.arg_type(function_name)
-    function_and_description = func_desc(function_name,func_list)
-    args = arguments_generator(small_llm,parametrs_for_func,function_and_description,ur)
-   
-    print(small_llm.decode(args))
+    user_input = jp.parsing_promts()
+    for request in user_input:
+        print("-"*50)
+        print(request)
+        target_name = small_llm.decode(name_generator(prefix_trie,small_llm,func_promt_generator(small_llm,func_tuples,request)))
+        for func_obj in func_list:
+            if func_obj.name == target_name:
+                found_parameters = from_dict_to_list(func_obj.parameters)
+                break
+        print(found_parameters)
+        function_and_description = (target_name,func_descriptions[all_funcs_names.index(target_name)])
+        args = arguments_generator(small_llm,found_parameters,function_and_description,request)
+        
+        
+        print(target_name)
+        print(small_llm.decode(args))
+        print("-"*50)
    
 
     
