@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from llm_sdk import Small_LLM_Model
 from enum import Enum
 import json
+from typing import Any
 
 
 class STATE(Enum):
@@ -21,6 +22,13 @@ def get_vocab_list(small_llm:"Small_LLM_Model"):
     res = []
     return data
 
+def softmax(x:Any,axis=-1):
+    x_max = np.max(x, axis=axis, keepdims=True)
+    exp_x = np.exp(x - x_max)
+
+    return exp_x / np.sum(exp_x,axis=axis, keepdims=True)
+
+
 
 def number_generate(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_param:str, is_last:bool,user_request:str) -> list[int]:
     has_dot:bool = False
@@ -35,45 +43,45 @@ def number_generate(small_llm:"Small_LLM_Model",promt_tokenst:list[int],name_par
     promt_tokenst.extend(name_tokens)
     term = '}' if is_last else ','
     vocab = get_vocab_list(small_llm)
-    digit_allowed_ids = [id for token, id in vocab.items() 
-                     if all(c in '0123456789.' for c in token)]
-    quote_id = vocab['"']
+    term_id = vocab.get(term)
+    minus_id = vocab.get('-')
+    digit_allowed_ids = []
+    null_ids = [id for token, id in vocab.items() if token.strip() == 'null']
+    for token,id in vocab.items():
+        clean_token = token.replace(' ', '').replace('Ġ', '').strip()
+        if not clean_token:
+            continue
+        if all(c in " 0123456789" for c in clean_token):
+            digit_allowed_ids.append(id)
 
     state = STATE.START_NUMS
     while state != STATE.END_NUMS:
         allowed_tokenids = []
         if state == STATE.START_NUMS:
-            allowed_chars = ['-'] + digits
+            allowed_tokenids = digit_allowed_ids + [minus_id]
+            allowed_tokenids.extend(null_ids)
         elif state == STATE.AFTER_MINUS or state == STATE.JUST_NUMBERS:
-            allowed_chars = digits + [term]
+            allowed_tokenids = digit_allowed_ids + [term_id,minus_id]
     
-        allowed_tokenids = [small_llm.encode(s)[0][0].item() for s in allowed_chars]
-
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)
         mask = np.full(len(logits), -np.inf)
         mask[allowed_tokenids] = 0
         masked_logits = logits + mask
-
-        next_token_id = int(np.argmax(masked_logits))
-
+        next_token_id = int(np.argmax(softmax(masked_logits)))
         promt_tokenst.append(next_token_id)
         res.append(next_token_id)
 
         decoded = small_llm.decode(next_token_id)
-        print(decoded)
-        if small_llm.decode(next_token_id) == ".":
-            has_dot = True
+
         if state == STATE.START_NUMS:
-            if small_llm.decode(next_token_id) == '-':
+            if next_token_id == minus_id:
                 state = STATE.AFTER_MINUS
             else:
                 state = STATE.JUST_NUMBERS
         elif state == STATE.AFTER_MINUS:
             state = STATE.JUST_NUMBERS
         elif state == STATE.JUST_NUMBERS:
-            if  ',' in decoded:
-                state = STATE.END_NUMS
-            elif '}' in decoded:
+            if  next_token_id == term_id:
                 state = STATE.END_NUMS
     return res
         

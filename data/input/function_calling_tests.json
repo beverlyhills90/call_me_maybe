@@ -1,9 +1,9 @@
 [
   {
-    "prompt": "What is the sum of 2 and 3?"
+    "prompt": "What is the sum of (2) and 3?"
   },
   {
-    "prompt": "What is the sum of 265 and 345?"
+    "prompt": "What is the sum of 'one' and five?"
   },
   {
     "prompt": "Greet shrek"
@@ -12,16 +12,13 @@
     "prompt": "Greet john"
   },
   {
+    "prompt": "Reverse the string. Actually don't never mind."
+  },
+  {
     "prompt": "Reverse the string 'hello'"
   },
   {
-    "prompt": "Reverse the string 'world'"
-  },
-  {
-    "prompt": "What is the square root of 16?"
-  },
-  {
-    "prompt": "Calculate the square root of 144"
+    "prompt": "Calculate the square root of eight minus four"
   },
   {
     "prompt": "Replace all numbers in \"Hello 34 I'm 233 years old\" with NUMBERS"
@@ -31,5 +28,8 @@
   },
   {
     "prompt": "Substitute the word 'cat' with 'dog' in 'The cat sat on the mat with another cat'"
+  },
+  {
+    "prompt": "What is the sum of  and ?"
   }
 ]

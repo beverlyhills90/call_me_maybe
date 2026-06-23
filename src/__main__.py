@@ -6,19 +6,41 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from llm_sdk import Small_LLM_Model
 import src.json_part as jp
 from src.arguments_generators_pack import number_generate,str_generator
+from src.cli_parsing import cli_parsing_main
 
 
 
+ARGUMENT_PROMPT_TEMPLATE_NUM = """You are a precise data extraction subsystem. Your task is to extract the EXACT value for the parameter "{arg_name}" from the user request and format it strictly as a JSON field.
 
-ARGUMENT_PROMPT_TEMPLATE_NUM = """
-Extract parameter "{arg_name}" from the user request.
+Context:
+- Function to call: {function_name}
+- Function Description: {function_description}
+- All Parameters Meta: {parameters_description}
 
-Function: {function_name}
-Description: {function_description}
-Parameters: {parameters_description}
+Rules:
+1. Extract ONLY the value for "{arg_name}".
+2. Do not explain anything. Do not add spaces after the number.
+3. End your response immediately with a closing curly brace '}}' if this is the end of the JSON.
 
+Few-Shot Examples:
+User request: "Set the temperature to 22 degrees"
+The value of "temperature" is: 22}}
+
+User request: "What is the sum of 'three' and five?"
+fn_add_numbers
+The value of "a" is: 3
+User request: "The level should be 5"
+The value of "level" is: 5}}
+
+User request: "The level should be 7"
+The value of "level" is: 7}}
+
+User request: "What is the sum of and"
+The value of "a" is: null
+
+
+Current Task:
 User request: "{user_request}"
-
 The value of "{arg_name}" is: """
 
 ARGUMENT_PROMPT_TEMPLATE_STR = """
@@ -32,34 +54,52 @@ Description: {function_description}
 Example:
 Request: "Reverse the string 'hello'"
 - s = "hello"
+User request: "Reverse the string. Actually don't never mind."
+The value of "s" is: ""
+
+User request: "Undo the last text flipping"
+The value of "s" is: ""
 
 User request: "{user_request}"
 
 The value of "{arg_name}" is: \"
 """
 
-ARGUMENT_PROMPT_TEMPLATE_STR_REGEX = """
-You are a precise data extraction subroutine for a regex substitution function.
+ARGUMENT_PROMPT_TEMPLATE_STR_REGEX = """You are a precise NLP backend routine. Convert the user request into a strict YAML block containing the exact regex arguments.
 
-The function replaces all occurrences of a pattern in a string.
-- source_string: the ORIGINAL string to search in (the full text)
-- regex: the PATTERN/WORD to find and replace
-- replacement: the EXACT NEW string to replace matches with (could be a word, symbol, or empty)
+CRITICAL REGEX DICTIONARY:
+- "vowels" -> '[aeiouAEIOU]'
+- "numbers" / "digits" -> '\\d+'
+- "words" -> '[a-zA-Z]+'
+- specific words (like 'cat') -> 'cat'
 
-Examples:
-Request: "Replace all 'cat' with 'dog' in 'the cat sat'"
-- source_string = "the cat sat"
-- regex = "cat"
-- replacement = "dog"
+Format your response EXACTLY like the examples below. Do not add any text before or after the YAML block.
 
-Request: "Replace all vowels in 'hello' with ASTERISKS"
-- source_string = "hello"
-- regex = "vowels"
-- replacement = "ASTERISKS"
+Few-Shot Examples:
+User request: "Replace all numbers in 'Hello 34' with NUMBERS"
+---
+source_string: "Hello 34"
+regex: "\\d+"
+replacement: "NUMBERS"
+---
 
+User request: "Replace all vowels in 'Programming is fun' with asterisks"
+---
+source_string: "Programming is fun"
+regex: "[aeiouAEIOU]"
+replacement: "*"
+---
+
+User request: "Substitute the word 'cat' with 'dog' in 'The cat sat'"
+---
+source_string: "The cat sat"
+regex: "cat"
+replacement: "dog"
+---
+
+Current Task:
 User request: "{user_request}"
-
-The value of "{arg_name}" is: \"
+---
 """
 
 arguments_types_machine = {
@@ -183,6 +223,9 @@ def from_dict_to_list(target_dict:dict):
     return res
 
 def main():
+
+    cli = cli_parsing_main()
+    print(cli.functions_definition)
     small_llm = Small_LLM_Model()
     func_list:jp.Function = jp.list_objects()
     all_funcs_names = [obj.name for obj in func_list]
@@ -190,22 +233,19 @@ def main():
     func_tuples = list(zip(all_funcs_names, func_descriptions))
     prefix_trie = Trie.to_trie(all_funcs_names,small_llm)
     user_input = jp.parsing_promts()
+
+
     for request in user_input:
-        print("-"*50)
-        print(request)
         target_name = small_llm.decode(name_generator(prefix_trie,small_llm,func_promt_generator(small_llm,func_tuples,request)))
         for func_obj in func_list:
             if func_obj.name == target_name:
                 found_parameters = from_dict_to_list(func_obj.parameters)
                 break
-        print(found_parameters)
         function_and_description = (target_name,func_descriptions[all_funcs_names.index(target_name)])
         args = arguments_generator(small_llm,found_parameters,function_and_description,request)
-        
-        
-        print(target_name)
-        print(small_llm.decode(args))
-        print("-"*50)
+        decoded = small_llm.decode(args)
+        jp.write_to_file("1",target_name,request,decoded)
+    
    
 
     
