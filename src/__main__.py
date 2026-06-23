@@ -205,13 +205,14 @@ def name_generator(
     return res
 
 
-# wraper for arguments
+
 def arguments_generator(
     small_llm: "Small_LLM_Model",
     arguments_list: list[tuple],
     function_desc,
     user_req: str,
 ) -> list[int]:
+    """wraper for arguments generator"""
     result = []
     result.append(small_llm.encode("{")[0][0].item())
 
@@ -283,6 +284,7 @@ def func_promt_generator(
 
 
 def from_dict_to_list(target_dict: dict):
+    """Converts a dictionary of parameters into a list of tuples of the form (name, type). """
     res = []
     for item, value in target_dict.items():
         param_type = value.get("type")
@@ -291,6 +293,7 @@ def from_dict_to_list(target_dict: dict):
 
 
 def main() -> None:
+    """int main()"""
     try:
         cli = cli_parsing_main()
     except CLIExeption as e:
