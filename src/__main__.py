@@ -6,8 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from llm_sdk import Small_LLM_Model
 import src.json_part as jp
 from src.arguments_generators_pack import number_generate,str_generator
-from src.cli_parsing import cli_parsing_main
-
+from src.cli_parsing import cli_parsing_main,CliExeption
 
 
 ARGUMENT_PROMPT_TEMPLATE_NUM = """You are a precise data extraction subsystem. Your task is to extract the EXACT value for the parameter "{arg_name}" from the user request and format it strictly as a JSON field.
@@ -222,18 +221,27 @@ def from_dict_to_list(target_dict:dict):
         res.append((item,param_type))
     return res
 
-def main():
-
-    cli = cli_parsing_main()
-    print(cli.functions_definition)
+def main() -> None:
+    try:
+        cli = cli_parsing_main()
+    except CliExeption as e :
+        print(f"Somtehing wrong with arguments: {e}")
+        return
     small_llm = Small_LLM_Model()
-    func_list:jp.Function = jp.list_objects()
+    try:
+        func_list = jp.list_objects(cli.functions_definition)
+    except Exception as e:
+        print(e)
+        return
     all_funcs_names = [obj.name for obj in func_list]
     func_descriptions = [obj.description for obj in func_list]
     func_tuples = list(zip(all_funcs_names, func_descriptions))
     prefix_trie = Trie.to_trie(all_funcs_names,small_llm)
-    user_input = jp.parsing_promts()
-
+    try:
+        user_input = jp.parsing_promts(cli.input)
+    except Exception as e:
+        print(e)
+        return
 
     for request in user_input:
         target_name = small_llm.decode(name_generator(prefix_trie,small_llm,func_promt_generator(small_llm,func_tuples,request)))
@@ -244,7 +252,7 @@ def main():
         function_and_description = (target_name,func_descriptions[all_funcs_names.index(target_name)])
         args = arguments_generator(small_llm,found_parameters,function_and_description,request)
         decoded = small_llm.decode(args)
-        jp.write_to_file("1",target_name,request,decoded)
+        jp.write_to_file(cli.output,target_name,request,decoded)
     
    
 

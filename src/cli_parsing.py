@@ -23,9 +23,13 @@ def cli_parsing_main() -> Any:
         raise  CliExeption("Need something more")
     elif len(vars(args)) < 3:
         raise  CliExeption("Too much args")
+    
     for name,value in vars(args).items():
-        if not value.endswith(".json"):
-            raise CliExeption(f"{name}:{value} is not a json file")
+        if value is None:
+            raise CliExeption(f"Argument -{name} is missing!")
+            return
 
-        
+        str_value = str(value)
+        if not str_value.endswith(".json"):
+            raise CliExeption(f"-{name}={value} is not a json file")
     return args
