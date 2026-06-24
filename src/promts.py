@@ -1,3 +1,5 @@
+from pydantic import Field, BaseModel, model_validator
+from llm_sdk import Small_LLM_Model
 
 
 ARGUMENT_PROMPT_TEMPLATE_NUM = """You are a precise data extraction subsystem. Your task is to extract the EXACT value for the parameter "{arg_name}" from the user request and format it strictly as a JSON field.
@@ -129,3 +131,36 @@ fn_greet
 Current Task:
 User request: "{user_request}"
 """
+
+
+class Node(BaseModel):
+    children: dict[int, "Node"] = Field(default_factory=dict)
+    function_name: str | None = None
+
+
+class Trie(BaseModel):
+    root: Node = Node()
+
+    def insert(self, ids: list[int], function_name: str):
+        node = self.root
+        for id in ids:
+            if id not in node.children:
+                node.children[id] = Node()
+            node = node.children[id]
+        node.function_name = function_name
+
+    @staticmethod
+    def get_ids(node: "Node") -> list[int]:
+        return list(node.children.keys())
+
+    @staticmethod
+    def get_name(node: "Node") -> str | None:
+        return node.function_name
+
+    @classmethod
+    def to_trie(cls, all_funcs: list[str], small_llm: "Small_LLM_Model") -> "Trie":
+        trie = cls()
+        for func in all_funcs:
+            tmp = small_llm.encode(func)[0].tolist()
+            trie.insert(tmp, func)
+        return trie

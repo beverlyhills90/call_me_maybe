@@ -18,7 +18,7 @@
     "prompt": "Reverse the string 'hello'"
   },
   {
-    "prompt": "Calculate the square root of eight minus four"
+    "prompt": "Calculate the square root of 8 minus 0"
   },
   {
     "prompt": "Replace all numbers in \"Hello 34 I'm 233 years old\" with NUMBERS"

@@ -2,11 +2,11 @@ import os
 import sys
 import numpy as np
 from enum import Enum
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 import json
 from typing import Any
+
+
 
 
 class STATE(Enum):
@@ -17,12 +17,10 @@ class STATE(Enum):
 
 
 def get_vocab_list(small_llm: "Small_LLM_Model"):
-    """Get vocab list from vocab.json
-    """
+    """Get vocab list from vocab.json"""
     json_path = small_llm.get_path_to_vocab_file()
     with open(json_path, "r", encoding="utf-8") as file:
         data = json.load(file)
-    res = []
     return data
 
 
@@ -37,7 +35,7 @@ def str_generator(
     small_llm: "Small_LLM_Model",
     promt_tokenst: list[int],
     name_param: str,
-    is_last: bool
+    is_last: bool,
 ) -> list[int]:
     res = []
 
@@ -70,10 +68,8 @@ def str_generator(
 
         masked_logits = logits + mask
         masked_logits[quote_id] += 10.0
-        probabilities = softmax(masked_logits)
 
         next_token_id = int(np.argmax(masked_logits))
-        actual_chance = probabilities[quote_id]
         promt_tokenst.append(next_token_id)
         res.append(next_token_id)
 

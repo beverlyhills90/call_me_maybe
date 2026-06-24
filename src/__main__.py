@@ -2,14 +2,13 @@ import os
 import sys
 from pydantic import Field, BaseModel, model_validator
 import numpy as np
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 import src.json_part as jp
 from src.arguments_generators_pack import number_generate, str_generator, bool_generate
 from src.cli_parsing import cli_parsing_main, CLIExeption
 import src.promts as promts
-
+from src.promts import Node,Trie
 
 arguments_types_machine = {
     "number": number_generate,
@@ -23,50 +22,18 @@ arguments_types_promts = {
 }
 
 
-class Node(BaseModel):
-    children: dict[int, "Node"] = Field(default_factory=dict)
-    function_name: str | None = None
-
-
-class Trie(BaseModel):
-    root: Node = Node()
-
-    def insert(self, ids: list[int], function_name: str):
-        node = self.root
-        for id in ids:
-            if id not in node.children:
-                node.children[id] = Node()
-            node = node.children[id]
-        node.function_name = function_name
-
-    @staticmethod
-    def get_ids(node: "Node") -> list[int]:
-        lst = []
-        return node.children.keys()
-
-    @staticmethod
-    def get_name(node: "Node") -> str | None:
-        return node.function_name
-
-    @classmethod
-    def to_trie(cls, all_funcs: list[str], small_llm: "Small_LLM_Model") -> "Trie":
-        trie = cls()
-        for func in all_funcs:
-            tmp = small_llm.encode(func)[0].tolist()
-            trie.insert(tmp, func)
-        return trie
 
 
 # function Name Generator
 def name_generator(
     prefix_trie: "Trie", small_llm: "Small_LLM_Model", promt_tokenst: list[int]
-) -> str:
+) -> list[int]:
     node = prefix_trie.root
     res = []
 
     while prefix_trie.get_name(node) is None:
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)
-        allowed_ids = list(prefix_trie.get_ids(node))
+        allowed_ids = prefix_trie.get_ids(node)
         mask = np.full(len(logits), -np.inf)
         mask[allowed_ids] = 0
         masked_logits = logits + mask
@@ -77,14 +44,13 @@ def name_generator(
     return res
 
 
-
 def arguments_generator(
     small_llm: "Small_LLM_Model",
     arguments_list: list[tuple],
     function_desc,
     user_req: str,
 ) -> list[int]:
-    """wraper for arguments generator"""
+    """wraper for arguments generators"""
     result = []
     result.append(small_llm.encode("{")[0][0].item())
 
@@ -114,9 +80,7 @@ def arguments_generator(
         )
         promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = arg == arguments_list[-1]
-        param_tokens = generator_func(
-            small_llm, promt_for_selector, arg_name, is_last
-        )
+        param_tokens = generator_func(small_llm, promt_for_selector, arg_name, is_last)
         result.extend(param_tokens)
     return result
 
@@ -156,7 +120,7 @@ def func_promt_generator(
 
 
 def from_dict_to_list(target_dict: dict):
-    """Converts a dictionary of parameters into a list of tuples of the form (name, type). """
+    """Converts a dictionary of parameters into a list of tuples of the form (name, type)."""
     res = []
     for item, value in target_dict.items():
         param_type = value.get("type")
