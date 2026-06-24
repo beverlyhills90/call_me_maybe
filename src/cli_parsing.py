@@ -4,7 +4,7 @@ from typing import Any
 
 
 class CLIExeption(Exception):
-    def __init__(self, msg:str) -> None:
+    def __init__(self, msg: str) -> None:
         super().__init__(msg)
 
 
@@ -24,13 +24,18 @@ def cli_parsing_main() -> Any:
         "-f",
         type=Path,
         required=True,
-        help="Путь к файлу определений функций",
     )
     parser.add_argument(
-        "--input", "-i", type=Path, required=True, help="Путь к входному файлу"
+        "--input",
+        "-i",
+        type=Path,
+        required=True,
     )
     parser.add_argument(
-        "--output", "-o", type=Path, required=True, help="Путь к выходному JSON файлу"
+        "--output",
+        "-o",
+        type=Path,
+        required=True,
     )
 
     args = parser.parse_args()

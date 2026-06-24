@@ -5,7 +5,7 @@ from llm_sdk import Small_LLM_Model
 from enum import Enum
 import json
 from typing import Any
-from .utils import get_vocab_list,softmax
+from .utils import get_vocab_list, softmax
 
 
 class STATE(Enum):
@@ -13,6 +13,7 @@ class STATE(Enum):
     AFTER_MINUS = 2
     JUST_NUMBERS = 3
     END_NUMS = 4
+
 
 def number_generate(
     small_llm: "Small_LLM_Model",
@@ -43,12 +44,12 @@ def number_generate(
 
     state = STATE.START_NUMS
     while state != STATE.END_NUMS:
-        allowed_tokenids:list[int] = []
+        allowed_tokenids: list[int] = []
         if state == STATE.START_NUMS:
             allowed_tokenids = digit_allowed_ids + [minus_id]  # type: ignore
             allowed_tokenids.extend(null_ids)
         elif state == STATE.AFTER_MINUS or state == STATE.JUST_NUMBERS:
-            allowed_tokenids = digit_allowed_ids + [term_id, minus_id] # type: ignore
+            allowed_tokenids = digit_allowed_ids + [term_id, minus_id]  # type: ignore
 
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)
         mask = np.full(len(logits), -np.inf)

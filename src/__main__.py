@@ -2,13 +2,14 @@ import os
 import sys
 from pydantic import Field, BaseModel, model_validator
 import numpy as np
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 import src.json_part as jp
 from src.arguments_generators_pack import number_generate, str_generator, bool_generate
 from src.cli_parsing import cli_parsing_main, CLIExeption
 import src.promts as promts
-from src.promts import Node,Trie
+from src.promts import Node, Trie
 from typing import cast
 from json import JSONDecodeError
 
@@ -22,8 +23,6 @@ arguments_types_promts = {
     "string": promts.ARGUMENT_PROMPT_TEMPLATE_STR,
     "boolean": promts.ARGUMENT_PROMPT_TEMPLATE_BOOL,
 }
-
-
 
 
 # function Name Generator
@@ -49,7 +48,7 @@ def name_generator(
 def arguments_generator(
     small_llm: "Small_LLM_Model",
     arguments_list: list[tuple],
-    function_desc:tuple[str, str],
+    function_desc: tuple[str, str],
     user_req: str,
 ) -> list[int]:
     """wraper for arguments generators"""
@@ -152,12 +151,12 @@ def main() -> None:
     except (JSONDecodeError, FileNotFoundError) as e:
         print(e)
         return
-    
+
     print("T-3000 working on your promts")
-    i:int = 0
+    i: int = 0
     for request in user_input:
         crasota = f"[{"=" * ( i * 10)}{" " * ((len(user_input) - i) * 10)}]"
-        print(crasota,end="\r",flush=True)
+        print(crasota, end="\r", flush=True)
         target_name = small_llm.decode(
             name_generator(
                 prefix_trie,
@@ -178,7 +177,7 @@ def main() -> None:
         )
         decoded = small_llm.decode(args)
         jp.write_to_file(cli.output, target_name, request, decoded)
-        
+
         i += 1
 
 

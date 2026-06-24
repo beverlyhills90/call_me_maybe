@@ -1,7 +1,6 @@
 from pydantic import Field, BaseModel, model_validator
 from llm_sdk import Small_LLM_Model
 
-
 ARGUMENT_PROMPT_TEMPLATE_NUM = """You are a precise data extraction subsystem. Your task is to extract the EXACT value for the parameter "{arg_name}" from the user request and format it strictly as a JSON field.
 
 Context:

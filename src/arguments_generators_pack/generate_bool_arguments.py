@@ -1,14 +1,16 @@
 import os
 import sys
 import numpy as np
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 from enum import Enum
 import json
 from typing import Any
 from pydantic import BaseModel, Field
-from src.promts import Trie,Node
+from src.promts import Trie, Node
 from .utils import get_vocab_list
+
 
 def bool_generate(
     small_llm: "Small_LLM_Model",
@@ -21,7 +23,7 @@ def bool_generate(
 
     small_llm -
     promt_tokenst -
-    name_param - 
+    name_param -
     is_last - boolean
     user_request -
     """

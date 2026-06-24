@@ -14,13 +14,12 @@ class Parameter(BaseModel):
 class Function(BaseModel):
     name: str = Field(min_length=5, max_length=100)
     description: str = Field(min_length=5, max_length=100)
-    parameters:dict[str, Parameter]
+    parameters: dict[str, Parameter]
     returns: dict[str, str]
 
 
 class Prompt(BaseModel):
     prompt: str = Field(min_length=1)
-
 
 
 def parsing_promts(file_path: str) -> list[str]:
@@ -41,7 +40,6 @@ def parsing_promts(file_path: str) -> list[str]:
         raise ValueError(f"Invalid JSON in {file_path}: {e}")
     except FileNotFoundError:
         raise FileNotFoundError(f"File not found: {file_path}")
-
 
     for promt in data:
         try:
@@ -77,7 +75,7 @@ def list_objects(file_path: str) -> list["Function"]:
     return ret_list
 
 
-def safe_eval_math(value:Any) -> Any:
+def safe_eval_math(value: Any) -> Any:
     """function for safe math operation in case if arguments like 8 - 4 was generated"""
     if isinstance(value, (int, float, bool)) or value is None:
         return value

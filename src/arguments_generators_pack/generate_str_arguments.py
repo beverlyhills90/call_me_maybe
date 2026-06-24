@@ -15,7 +15,6 @@ class STATE(Enum):
     AFTER_STR = 3
 
 
-
 def str_generator(
     small_llm: "Small_LLM_Model",
     promt_tokenst: list[int],
@@ -44,7 +43,7 @@ def str_generator(
         if state == STATE.START_STR:
             allowed_tokenids = [quote_id]
         elif state == STATE.JUST_SIMBOLS:
-            allowed_tokenids = string_allowed_ids + [quote_id] # type: ignore
+            allowed_tokenids = string_allowed_ids + [quote_id]  # type: ignore
         elif state == STATE.AFTER_STR:
             allowed_tokenids = [term_id]
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)
