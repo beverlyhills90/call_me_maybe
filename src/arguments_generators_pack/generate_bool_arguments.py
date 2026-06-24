@@ -1,7 +1,6 @@
 import os
 import sys
 import numpy as np
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 from enum import Enum
@@ -9,22 +8,7 @@ import json
 from typing import Any
 from pydantic import BaseModel, Field
 from src.promts import Trie,Node
-
-def get_vocab_list(small_llm: "Small_LLM_Model") -> dict:
-    """Get vocab list from vocab.json"""
-    json_path = small_llm.get_path_to_vocab_file()
-    with open(json_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    return data
-
-
-def softmax(x: Any):
-    """softmax"""
-    x_max = np.max(x, keepdims=True)
-    exp_x = np.exp(x - x_max)
-
-    return exp_x / np.sum(exp_x, keepdims=True)
-
+from .utils import get_vocab_list
 
 def bool_generate(
     small_llm: "Small_LLM_Model",

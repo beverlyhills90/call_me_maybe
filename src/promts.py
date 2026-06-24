@@ -141,7 +141,7 @@ class Node(BaseModel):
 class Trie(BaseModel):
     root: Node = Node()
 
-    def insert(self, ids: list[int], function_name: str):
+    def insert(self, ids: list[int], function_name: str) -> None:
         node = self.root
         for id in ids:
             if id not in node.children:

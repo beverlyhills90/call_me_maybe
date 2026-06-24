@@ -5,8 +5,7 @@ from enum import Enum
 from llm_sdk import Small_LLM_Model
 import json
 from typing import Any
-
-
+from .utils import get_vocab_list
 
 
 class STATE(Enum):
@@ -15,20 +14,6 @@ class STATE(Enum):
     END_STR = 2
     AFTER_STR = 3
 
-
-def get_vocab_list(small_llm: "Small_LLM_Model"):
-    """Get vocab list from vocab.json"""
-    json_path = small_llm.get_path_to_vocab_file()
-    with open(json_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    return data
-
-
-def softmax(x: Any):
-    """softmax"""
-    x_max = np.max(x)
-    exp_x = np.exp(x - x_max)
-    return exp_x / np.sum(exp_x)
 
 
 def str_generator(
@@ -59,7 +44,7 @@ def str_generator(
         if state == STATE.START_STR:
             allowed_tokenids = [quote_id]
         elif state == STATE.JUST_SIMBOLS:
-            allowed_tokenids = string_allowed_ids + [quote_id]
+            allowed_tokenids = string_allowed_ids + [quote_id] # type: ignore
         elif state == STATE.AFTER_STR:
             allowed_tokenids = [term_id]
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)

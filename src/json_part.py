@@ -1,29 +1,35 @@
 import json
 from pathlib import Path
-from pydantic import Field, BaseModel, model_validator
+from pydantic import Field, BaseModel, model_validator, ValidationError
 import operator
 import ast
 import re
+from typing import Any
+
+
+class Parameter(BaseModel):
+    type: str = Field(min_length=1, max_length=100)
 
 
 class Function(BaseModel):
     name: str = Field(min_length=5, max_length=100)
     description: str = Field(min_length=5, max_length=100)
-    parameters: dict
+    parameters:dict[str, Parameter]
     returns: dict[str, str]
 
-    @model_validator(mode="after")
-    def validate_parameters_structure(self) -> "Function":
-        return self
+
+class Prompt(BaseModel):
+    prompt: str = Field(min_length=1)
+
 
 
 def parsing_promts(file_path: str) -> list[str]:
-    """Function to pras user promts
+    """Paras user promts
 
     ARGS:
     file_path - path to the file with user promts
 
-    Raises: Exeption
+    Raises: json.JSONDecodeError,FileNotFoundError
     """
     current_dir = Path(__file__).resolve().parent.parent
     ret_list = []
@@ -31,11 +37,18 @@ def parsing_promts(file_path: str) -> list[str]:
     try:
         with open(json_path, "r", encoding="utf-8") as file:
             data = json.load(file)
-    except Exception as e:
-        raise e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in {file_path}: {e}")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
+
 
     for promt in data:
-        ret_list.append(promt.get("prompt"))
+        try:
+            validated = Prompt.model_validate(promt)
+            ret_list.append(validated.prompt)
+        except ValidationError as e:
+            print(f"Validation Error in promt: {list(promt.values())[0]}")
     return ret_list
 
 
@@ -53,15 +66,18 @@ def list_objects(file_path: str) -> list["Function"]:
     try:
         with open(json_path, "r", encoding="utf-8") as file:
             data = json.load(file)
-    except Exception as e:
-        raise e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in {file_path}: {e}")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
 
     for func in data:
+
         ret_list.append(Function.model_validate(func))
     return ret_list
 
 
-def safe_eval_math(value):
+def safe_eval_math(value:Any) -> Any:
     """function for safe math operation in case if arguments like 8 - 4 was generated"""
     if isinstance(value, (int, float, bool)) or value is None:
         return value

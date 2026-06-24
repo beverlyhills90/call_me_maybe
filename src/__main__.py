@@ -9,6 +9,8 @@ from src.arguments_generators_pack import number_generate, str_generator, bool_g
 from src.cli_parsing import cli_parsing_main, CLIExeption
 import src.promts as promts
 from src.promts import Node,Trie
+from typing import cast
+from json import JSONDecodeError
 
 arguments_types_machine = {
     "number": number_generate,
@@ -47,7 +49,7 @@ def name_generator(
 def arguments_generator(
     small_llm: "Small_LLM_Model",
     arguments_list: list[tuple],
-    function_desc,
+    function_desc:tuple[str, str],
     user_req: str,
 ) -> list[int]:
     """wraper for arguments generators"""
@@ -87,7 +89,7 @@ def arguments_generator(
 
 def func_promt_generator(
     small_llm: "Small_LLM_Model", func_list: list[tuple], user_request: str
-):
+) -> list[int]:
     FUNCTION_CHOOSE_TEMPLATE = """
 
     You must choose exactly one function from the list below that best matches the user request.
@@ -116,20 +118,20 @@ def func_promt_generator(
         func_name_desc=all_functions_str, user_request=user_request
     )
     tokens = small_llm.encode(full_prompt_str)[0].tolist()
-    return tokens
+    return cast(list[int], tokens)
 
 
-def from_dict_to_list(target_dict: dict):
+def from_dict_to_list(target_dict: dict) -> list[tuple]:
     """Converts a dictionary of parameters into a list of tuples of the form (name, type)."""
     res = []
     for item, value in target_dict.items():
-        param_type = value.get("type")
+        param_type = vars(value).get("type")
         res.append((item, param_type))
     return res
 
 
 def main() -> None:
-    """int main()"""
+    """main()"""
     try:
         cli = cli_parsing_main()
     except CLIExeption as e:
@@ -139,7 +141,7 @@ def main() -> None:
     try:
         func_list = jp.list_objects(cli.functions_definition)
     except Exception as e:
-        print(e)
+        print(f"\033[31m{e}\033[0m")
         return
     all_funcs_names = [obj.name for obj in func_list]
     func_descriptions = [obj.description for obj in func_list]
@@ -147,11 +149,15 @@ def main() -> None:
     prefix_trie = Trie.to_trie(all_funcs_names, small_llm)
     try:
         user_input = jp.parsing_promts(cli.input)
-    except Exception as e:
+    except (JSONDecodeError, FileNotFoundError) as e:
         print(e)
         return
-
+    
+    print("T-3000 working on your promts")
+    i:int = 0
     for request in user_input:
+        crasota = f"[{"=" * ( i * 10)}{" " * ((len(user_input) - i) * 10)}]"
+        print(crasota,end="\r",flush=True)
         target_name = small_llm.decode(
             name_generator(
                 prefix_trie,
@@ -172,6 +178,8 @@ def main() -> None:
         )
         decoded = small_llm.decode(args)
         jp.write_to_file(cli.output, target_name, request, decoded)
+        
+        i += 1
 
 
 if __name__ == "__main__":

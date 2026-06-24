@@ -4,7 +4,7 @@ from typing import Any
 
 
 class CLIExeption(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg:str) -> None:
         super().__init__(msg)
 
 

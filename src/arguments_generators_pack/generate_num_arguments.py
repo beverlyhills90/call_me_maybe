@@ -1,12 +1,11 @@
 import os
 import sys
 import numpy as np
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 from enum import Enum
 import json
 from typing import Any
+from .utils import get_vocab_list,softmax
 
 
 class STATE(Enum):
@@ -14,23 +13,6 @@ class STATE(Enum):
     AFTER_MINUS = 2
     JUST_NUMBERS = 3
     END_NUMS = 4
-
-
-def get_vocab_list(small_llm: "Small_LLM_Model"):
-    """Get vocab list from vocab.json"""
-    json_path = small_llm.get_path_to_vocab_file()
-    with open(json_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    return data
-
-
-def softmax(x: Any):
-    """softmax"""
-    x_max = np.max(x, keepdims=True)
-    exp_x = np.exp(x - x_max)
-
-    return exp_x / np.sum(exp_x, keepdims=True)
-
 
 def number_generate(
     small_llm: "Small_LLM_Model",
@@ -61,12 +43,12 @@ def number_generate(
 
     state = STATE.START_NUMS
     while state != STATE.END_NUMS:
-        allowed_tokenids = []
+        allowed_tokenids:list[int] = []
         if state == STATE.START_NUMS:
-            allowed_tokenids = digit_allowed_ids + [minus_id]
+            allowed_tokenids = digit_allowed_ids + [minus_id]  # type: ignore
             allowed_tokenids.extend(null_ids)
         elif state == STATE.AFTER_MINUS or state == STATE.JUST_NUMBERS:
-            allowed_tokenids = digit_allowed_ids + [term_id, minus_id]
+            allowed_tokenids = digit_allowed_ids + [term_id, minus_id] # type: ignore
 
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)
         mask = np.full(len(logits), -np.inf)
