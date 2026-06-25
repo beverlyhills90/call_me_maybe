@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from pydantic import Field, BaseModel, model_validator, ValidationError
+from pydantic import Field, BaseModel, ValidationError
 import operator
 import ast
 import re
@@ -45,7 +45,7 @@ def parsing_promts(file_path: str) -> list[str]:
         try:
             validated = Prompt.model_validate(promt)
             ret_list.append(validated.prompt)
-        except ValidationError as e:
+        except ValidationError:
             print(f"Validation Error in promt: {list(promt.values())[0]}")
     return ret_list
 
@@ -76,12 +76,13 @@ def list_objects(file_path: str) -> list["Function"]:
 
 
 def safe_eval_math(value: Any) -> Any:
-    """function for safe math operation in case if arguments like 8 - 4 was generated"""
+    """function for safe math operation in case
+    if arguments like 8 - 4 was generated"""
     if isinstance(value, (int, float, bool)) or value is None:
         return value
 
     if isinstance(value, str):
-        VALID_OPERATORS = {
+        OPERATORS = {
             ast.Add: operator.add,
             ast.Sub: operator.sub,
             ast.Mult: operator.mul,
@@ -94,14 +95,16 @@ def safe_eval_math(value: Any) -> Any:
             if isinstance(node, ast.Constant):
                 return node.value
 
-            if isinstance(node, ast.BinOp) and type(node.op) in VALID_OPERATORS:
+            if isinstance(node, ast.BinOp) and type(node.op) in OPERATORS:
                 left = safe_eval_math(
-                    ast.unparse(node.left) if hasattr(ast, "unparse") else node.left
+                    ast.unparse(node.left) if hasattr(ast, "unparse")
+                    else node.left
                 )
                 right = safe_eval_math(
-                    ast.unparse(node.right) if hasattr(ast, "unparse") else node.right
+                    ast.unparse(node.right) if hasattr(ast, "unparse")
+                    else node.right
                 )
-                return VALID_OPERATORS[type(node.op)](left, right)
+                return OPERATORS[type(node.op)](left, right)
 
         except Exception:
             return value
@@ -122,8 +125,10 @@ def write_to_file(
     """
     current_dir = Path(__file__).resolve().parent.parent
     user_path = Path(file_path)
-    json_path = current_dir / user_path if not user_path.is_absolute() else user_path
-
+    if user_path.is_absolute():
+        json_path = user_path
+    else:
+        json_path = current_dir / user_path
     json_path.parent.mkdir(parents=True, exist_ok=True)
     if isinstance(arguments, str):
         arguments = re.sub(r"\\([dwisbDWISB])", r"\\\\\1", arguments)
@@ -145,8 +150,11 @@ def write_to_file(
     else:
         arguments_valid = safe_eval_math(arguments_dict)
 
-    arguments_valid = {key: safe_eval_math(val) for key, val in arguments_dict.items()}
-    new_data = {"prompt": promt, "name": function_name, "parameters": arguments_valid}
+    arguments_valid = {key: safe_eval_math(val)
+                       for key, val in arguments_dict.items()}
+    new_data = {"prompt": promt,
+                "name": function_name,
+                "parameters": arguments_valid}
     data = []
 
     if Path(json_path).exists():

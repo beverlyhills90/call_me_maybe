@@ -1,15 +1,11 @@
-import os
-import sys
-from pydantic import Field, BaseModel, model_validator
 import numpy as np
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from llm_sdk import Small_LLM_Model
 import src.json_part as jp
-from src.arguments_generators_pack import number_generate, str_generator, bool_generate
+from src.arguments_generators_pack import str_generator, bool_generate
+from src.arguments_generators_pack import number_generate
 from src.cli_parsing import cli_parsing_main, CLIExeption
 import src.promts as promts
-from src.promts import Node, Trie
+from src.promts import Trie
 from typing import cast
 from json import JSONDecodeError
 
@@ -81,7 +77,8 @@ def arguments_generator(
         )
         promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = arg == arguments_list[-1]
-        param_tokens = generator_func(small_llm, promt_for_selector, arg_name, is_last)
+        param_tokens = generator_func(
+            small_llm, promt_for_selector, arg_name, is_last)
         result.extend(param_tokens)
     return result
 
@@ -91,15 +88,19 @@ def func_promt_generator(
 ) -> list[int]:
     FUNCTION_CHOOSE_TEMPLATE = """
 
-    You must choose exactly one function from the list below that best matches the user request.
-    
+    You must choose exactly one function from the
+    list below that best matches the user request.
+
     Example:
     User request: "Check if the firewall is there"
-    Explanation: The user is asking about a system feature/component status (firewall), which belongs to feature management, not math.
+    Explanation: The user is asking about a system feature/component status
+    (firewall), which belongs to feature management, not math.
     Selected Function: fn_toggle_feature
 
     User request: "Extract all digits from 'Room 404 and 200'"
-    Explanation: The user wants to find text patterns (digits) inside a string using modern NLP/Regex, not perform a mathematical square root operation.
+    Explanation: The user wants to find text patterns (digits)
+    inside a string using modern NLP/Regex,
+    not perform a mathematical square root operation.
     Selected Function: fn_substitute_string_with_regex
     Available functions:
     {func_name_desc}
@@ -121,7 +122,8 @@ def func_promt_generator(
 
 
 def from_dict_to_list(target_dict: dict) -> list[tuple]:
-    """Converts a dictionary of parameters into a list of tuples of the form (name, type)."""
+    """Converts a dictionary of parameters into a
+    list of tuples of the form (name, type)."""
     res = []
     for item, value in target_dict.items():
         param_type = vars(value).get("type")
@@ -155,7 +157,7 @@ def main() -> None:
     print("T-3000 working on your promts")
     i: int = 0
     for request in user_input:
-        crasota = f"[{"=" * ( i * 10)}{" " * ((len(user_input) - i) * 10)}]"
+        crasota = f"[{"=" * (i * 10)}{" " * ((len(user_input) - i) * 10)}]"
         print(crasota, end="\r", flush=True)
         target_name = small_llm.decode(
             name_generator(
