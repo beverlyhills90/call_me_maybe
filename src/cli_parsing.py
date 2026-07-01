@@ -23,19 +23,22 @@ def cli_parsing_main() -> Any:
         "--functions_definition",
         "-f",
         type=Path,
+        default=Path("data/input/functions_definition.json"),
         required=True,
     )
     parser.add_argument(
         "--input",
         "-i",
         type=Path,
-        required=True,
+        default=Path("data/input/test_1.json"),
+        required=False,
     )
     parser.add_argument(
         "--output",
         "-o",
         type=Path,
-        required=True,
+        default=Path("data/output/default_o.json"),
+        required=False,
     )
 
     args = parser.parse_args()
