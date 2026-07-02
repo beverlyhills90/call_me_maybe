@@ -24,7 +24,7 @@ def cli_parsing_main() -> Any:
         "-f",
         type=Path,
         default=Path("data/input/functions_definition.json"),
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--input",
