@@ -16,7 +16,7 @@ def number_generate(
     promt_tokenst: list[int],
     name_param: str,
     is_last: bool,
-) -> list[int]:
+) -> list[int] | None:
 
     res = []
 
@@ -26,7 +26,10 @@ def number_generate(
     res.extend(name_tokens)
     promt_tokenst.extend(name_tokens)
     term = "}" if is_last else ","
-    vocab = get_vocab_list(small_llm)
+    try:
+        vocab = get_vocab_list(small_llm)
+    except OSError:
+        return None
     term_id = vocab.get(term)
     minus_id = vocab.get("-")
     digit_allowed_ids = []

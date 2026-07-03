@@ -46,7 +46,7 @@ def arguments_generator(
     arguments_list: list[tuple],
     function_desc: tuple[str, str],
     user_req: str,
-) -> list[int]:
+) -> list[int] | None:
     """wraper for arguments generators"""
     result = []
     result.append(small_llm.encode("{")[0][0].item())
@@ -60,6 +60,8 @@ def arguments_generator(
         arg_name, arg_type = arg
 
         generator_func = arguments_types_machine[arg_type]
+        if generator_func is None:
+            return
         if "regex" in function_desc[0]:
             promt_for_arg = promts.ARGUMENT_PROMPT_TEMPLATE_STR_REGEX
         else:
@@ -177,6 +179,8 @@ def main() -> None:
         args = arguments_generator(
             small_llm, found_parameters, function_and_description, request
         )
+        if args is None:
+            return
         decoded = small_llm.decode(args)
         jp.write_to_file(cli.output, target_name, request, decoded)
 

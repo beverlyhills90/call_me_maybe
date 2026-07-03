@@ -16,14 +16,17 @@ def str_generator(
     promt_tokenst: list[int],
     name_param: str,
     is_last: bool,
-) -> list[int]:
+) -> list[int] | None:
     res = []
 
     formatted_name = f'"{name_param}":'
     name_tokens = [t.item() for t in small_llm.encode(formatted_name)[0]]
     res.extend(name_tokens)
     promt_tokenst.extend(name_tokens)
-    vocab = get_vocab_list(small_llm)
+    try:
+        vocab = get_vocab_list(small_llm)
+    except OSError:
+        return None
     quote_id = vocab.get('"')
 
     term = "}" if is_last else ","
