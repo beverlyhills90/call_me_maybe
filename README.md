@@ -1,3 +1,4 @@
+*This project has been created as part of the 42 curriculum by oldanyli.*
 
 ---
 
@@ -231,6 +232,79 @@ uv run python -m src \
     "parameters": {"name": "john"}
   }
 ]
+```
+
+---
+
+## Bonus Features
+
+### Custom BPE Tokenizer
+
+A public implementation of `encode()` and `decode()` methods was written from scratch, avoiding direct use of the SDK's built-in tokenizer methods in the main code. Only `get_path_to_vocab_file()` and `get_path_to_merges_file()` (public SDK methods) are used internally.
+
+```
+Custom BPE Tokenizer — encode() pipeline:
+
+  Input text: "hello world"
+       │
+       ▼
+  UTF-8 bytes → Unicode mapping:
+  space → Ġ,  \n → Ċ,  \r → ĉ,  other → chr(byte)
+       │
+       ▼
+  Split into individual chars:
+  ['h', 'e', 'l', 'l', 'o', 'Ġ', 'w', 'o', 'r', 'l', 'd']
+       │
+       ▼
+  BPE merge loop (merges.txt):
+
+  Iteration 1: find highest priority pair from merges.txt
+  ['h', 'e', 'l', 'l', 'o', 'Ġ', 'w', 'o', 'r', 'l', 'd']
+   best pair: ('Ġ', 'w') → rank 42
+   ['h', 'e', 'l', 'l', 'o', 'Ġw', 'o', 'r', 'l', 'd']
+
+  Iteration 2: next highest priority pair
+   best pair: ('l', 'o') → rank 87
+   ['h', 'e', 'l', 'lo', 'Ġw', 'o', 'r', 'l', 'd']
+
+  ... repeat until no more pairs in merges.txt ...
+
+  Final tokens: ['hello', 'Ġworld']
+       │
+       ▼
+  Lookup in vocab.json:
+  'hello' → 9707
+  'Ġworld' → 1879
+       │
+       ▼
+  Output: [9707, 1879]
+
+decode() — reverse pipeline:
+
+  [9707, 1879]
+       │
+       ▼
+  Invert vocab.json:
+  9707 → 'hello'
+  1879 → 'Ġworld'
+       │
+       ▼
+  Unicode → UTF-8:
+  'Ġ' → ' ',  'Ċ' → '\n',  'ĉ' → '\r'
+       │
+       ▼
+  Output: "hello world"
+```
+
+### Safe Math Evaluation
+
+If the model generates a simple arithmetic expression as a numeric argument (e.g. `8 - 0` instead of `8`), the system evaluates it safely using Python's `ast` module — supporting `+`, `-`, `*`, `/`. This handles edge cases where the model produces expressions rather than plain numbers, without using `eval()`.
+
+Example:
+```
+model output: "8 - 0"  →  safe_eval_math()  →  8
+model output: "3 * 4"  →  safe_eval_math()  →  12
+model output: "hello"  →  safe_eval_math()  →  "hello"  (unchanged)
 ```
 
 ---

@@ -81,6 +81,8 @@ def arguments_generator(
         is_last = arg == arguments_list[-1]
         param_tokens = generator_func(
             small_llm, promt_for_selector, arg_name, is_last)
+        if param_tokens is None:
+            return None
         result.extend(param_tokens)
     return result
 
