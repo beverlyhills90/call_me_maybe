@@ -38,7 +38,7 @@ def number_generate(
         clean_token = token.replace(" ", "").replace("Ġ", "").strip()
         if not clean_token:
             continue
-        if all(c in " 0123456789" for c in clean_token):
+        if all(c in " 0123456789." for c in clean_token):
             digit_allowed_ids.append(id)
 
     state = STATE.START_NUMS

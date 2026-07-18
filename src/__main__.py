@@ -13,11 +13,13 @@ arguments_types_machine = {
     "number": number_generate,
     "string": str_generator,
     "boolean": bool_generate,
+    "integer": number_generate,
 }
 arguments_types_promts = {
     "number": promts.ARGUMENT_PROMPT_TEMPLATE_NUM,
     "string": promts.ARGUMENT_PROMPT_TEMPLATE_STR,
     "boolean": promts.ARGUMENT_PROMPT_TEMPLATE_BOOL,
+    "integer":promts.ARGUMENT_PROMPT_TEMPLATE_NUM
 }
 
 
