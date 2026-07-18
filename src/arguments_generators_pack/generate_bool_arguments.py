@@ -1,6 +1,8 @@
 import numpy as np
+
 from llm_sdk import Small_LLM_Model
 from src.promts import Trie
+
 from .utils import get_vocab_list
 
 

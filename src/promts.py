@@ -1,4 +1,5 @@
-from pydantic import Field, BaseModel
+from pydantic import BaseModel, Field
+
 from llm_sdk import Small_LLM_Model
 
 ARGUMENT_PROMPT_TEMPLATE_NUM = """
@@ -12,53 +13,57 @@ Context:
 - All Parameters Meta: {parameters_description}
 
 Rules:
-1. Extract ONLY the value for "{arg_name}".
-2. Do not explain anything. Do not add spaces after the number.
-3. End your response immediately with a closing curly brace
-'}}' if this is the end of the JSON.
+1. Extract ONLY the raw number for "{arg_name}" as it appears in the text.
+2. DO NOT calculate, multiply, add or perform any math operations.
+3. Do not explain anything. Do not add spaces after the number.
+4. End your response immediately with a closing curly brace '}}'
+if this is the end of the JSON.
 
 Few-Shot Examples:
+User request: "What is the product of 6 and 7?"
+The value of "a" is: 6
+The value of "b" is: 7
+
+User request: "What is the sum of 3 and 5?"
+The value of "a" is: 3
+The value of "b" is: 5
+
 User request: "Set the temperature to 22 degrees"
-The value of "temperature" is: 22}}
+The value of "temperature" is: 22
 
 User request: "What is the sum of 'three' and five?"
-fn_add_numbers
 The value of "a" is: 3
+
 User request: "The level should be 5"
-The value of "level" is: 5}}
-
-User request: "The level should be 7"
-The value of "level" is: 7}}
-
-User request: "What is the sum of and"
-The value of "a" is: null
-
+The value of "level" is: 5
 
 Current Task:
 User request: "{user_request}"
 The value of "{arg_name}" is: """
 
 ARGUMENT_PROMPT_TEMPLATE_STR = """
-You are a precise data extraction subroutine.
-
-Extract the value of parameter "{arg_name}" from the user request.
+You are a data extraction system. Extract ONLY the value of
+parameter "{arg_name}".
+Output ONLY the value, nothing else. No explanations, no JSON, no comments.
 
 Function: {function_name}
 Description: {function_description}
 
-Example:
-Request: "Reverse the string 'hello'"
-- s = "hello"
-User request: "Reverse the string. Actually don't never mind."
-The value of "s" is: ""
+Examples:
+Request: "Execute SQL query 'SELECT * FROM users' on the production database"
+The value of "query" is: "SELECT * FROM users"
+The value of "database" is: "production"
 
-User request: "Undo the last text flipping"
-The value of "s" is: ""
+Request: "Read the file at /home/user/data.json with utf-8 encoding"
+The value of "path" is: "/home/user/data.json"
+The value of "encoding" is: "utf-8"
+
+Request: "Read C:\\\\Users\\\\john\\\\config.ini with latin-1 encoding"
+The value of "path" is: "C:\\\\Users\\\\john\\\\config.ini"
+The value of "encoding" is: "latin-1"
 
 User request: "{user_request}"
-
-The value of "{arg_name}" is: \"
-"""
+The value of "{arg_name}" is: \""""
 
 ARGUMENT_PROMPT_TEMPLATE_STR_REGEX = """
 You are a precise NLP backend routine.
@@ -165,10 +170,9 @@ class Trie(BaseModel):
         return node.function_name
 
     @classmethod
-    def to_trie(cls,
-                all_funcs: list[str],
-                small_llm: "Small_LLM_Model"
-                ) -> "Trie":
+    def to_trie(
+        cls, all_funcs: list[str], small_llm: "Small_LLM_Model"
+    ) -> "Trie":
         trie = cls()
         for func in all_funcs:
             tmp = small_llm.encode(func)[0].tolist()

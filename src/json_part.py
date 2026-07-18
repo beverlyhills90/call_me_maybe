@@ -1,10 +1,9 @@
 import json
-from pathlib import Path
-from pydantic import Field, BaseModel, ValidationError
-import operator
-import ast
 import re
+from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, Field, ValidationError
 
 
 class Parameter(BaseModel):
@@ -34,7 +33,7 @@ def parsing_promts(file_path: str) -> list[str]:
     ret_list = []
     json_path = current_dir / file_path
     try:
-        with open(json_path, "r", encoding="utf-8") as file:
+        with open(json_path, encoding="utf-8") as file:
             data = json.load(file)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in {file_path}: {e}")
@@ -62,7 +61,7 @@ def list_objects(file_path: str) -> list["Function"]:
     json_path = current_dir / file_path
 
     try:
-        with open(json_path, "r", encoding="utf-8") as file:
+        with open(json_path, encoding="utf-8") as file:
             data = json.load(file)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in {file_path}: {e}")
@@ -70,56 +69,22 @@ def list_objects(file_path: str) -> list["Function"]:
         raise FileNotFoundError(f"File not found: {file_path}")
 
     for func in data:
-
         ret_list.append(Function.model_validate(func))
     return ret_list
 
 
-def safe_eval_math(value: Any) -> Any:
-    """function for safe math operation in case
-    if arguments like 8 - 4 was generated"""
-    if isinstance(value, (int, float, bool)) or value is None:
-        return value
-
-    if isinstance(value, str):
-        OPERATORS = {
-            ast.Add: operator.add,
-            ast.Sub: operator.sub,
-            ast.Mult: operator.mul,
-            ast.Div: operator.truediv,
-        }
-
-        try:
-            node = ast.parse(value, mode="eval").body
-
-            if isinstance(node, ast.Constant):
-                return node.value
-
-            if isinstance(node, ast.BinOp) and type(node.op) in OPERATORS:
-                left = safe_eval_math(
-                    ast.unparse(node.left) if hasattr(ast, "unparse")
-                    else node.left
-                )
-                right = safe_eval_math(
-                    ast.unparse(node.right) if hasattr(ast, "unparse")
-                    else node.right
-                )
-                return OPERATORS[type(node.op)](left, right)
-
-        except Exception:
-            return value
-
-    return value
-
-
 def write_to_file(
-    file_path: str, function_name: str, promt: str, arguments: str
+    file_path: str,
+    function_name: str,
+    prompt: str,
+    arguments: str,
+    args_schema: Any,
 ) -> None:
     """Write generated output to json output file
     Args:
     file_path - path to output file
     function_name - name of function
-    promt - user request
+    prompt - user request
     arguments - generated arguments for function
 
     """
@@ -129,12 +94,16 @@ def write_to_file(
         json_path = user_path
     else:
         json_path = current_dir / user_path
+
     json_path.parent.mkdir(parents=True, exist_ok=True)
+
     if isinstance(arguments, str):
-        arguments = re.sub(r"\\([dwisbDWISB])", r"\\\\\1", arguments)
+        arguments = re.sub(r"\\([dDwWsS])", r"\\\\\1", arguments)
+
     fixed_arguments = re.sub(
-        r":\s*([0-9\s.+\-*/]+(?:[+\-*/][0-9\s.+\-*/]+)+)", r': "\1"', arguments
+        r'(?<!\\)\\(?!\\|"|\\/|n|r|t|b|f|u)', r"\\\\", arguments
     )
+
     try:
         if isinstance(fixed_arguments, str):
             arguments_dict = json.loads(fixed_arguments)
@@ -143,23 +112,34 @@ def write_to_file(
     except json.JSONDecodeError:
         arguments_dict = {"raw_error_arguments": arguments}
 
-    if isinstance(arguments_dict, dict):
-        arguments_valid = {
-            key: safe_eval_math(val) for key, val in arguments_dict.items()
-        }
-    else:
-        arguments_valid = safe_eval_math(arguments_dict)
+    if isinstance(arguments_dict, dict) and args_schema is not None:
+        for key in list(arguments_dict.keys()):
+            if key in args_schema:
+                param_type = args_schema[key].type
+                if param_type == "number":
+                    try:
+                        arguments_dict[key] = float(arguments_dict[key])
+                    except (ValueError, TypeError):
+                        pass
+                elif param_type == "string":
+                    try:
+                        arguments_dict[key] = (
+                            str(arguments_dict[key]).strip().rstrip("'")
+                        )
+                    except (ValueError, TypeError):
+                        pass
 
-    arguments_valid = {key: safe_eval_math(val)
-                       for key, val in arguments_dict.items()}
-    new_data = {"prompt": promt,
-                "name": function_name,
-                "parameters": arguments_valid}
+    new_data = {
+        "prompt": prompt,
+        "name": function_name,
+        "parameters": arguments_dict,
+    }
+
     data = []
 
-    if Path(json_path).exists():
+    if json_path.exists():
         try:
-            with open(json_path, "r", encoding="utf-8") as file:
+            with open(json_path, encoding="utf-8") as file:
                 data = json.load(file)
                 if not isinstance(data, list):
                     data = [data]

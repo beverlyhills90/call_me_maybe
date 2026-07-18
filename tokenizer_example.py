@@ -1,11 +1,10 @@
-from llm_sdk import Small_LLM_Model
-from src.arguments_generators_pack.utils import get_vocab_list
 from typing import Any
 
-from typing import Any, Iterable
+from llm_sdk import Small_LLM_Model
+from src.arguments_generators_pack.utils import get_vocab_list
+
 
 class TikTokenizer:
-
     @staticmethod
     def encode(small_llm: "Small_LLM_Model", text: str) -> list[int]:
 
@@ -23,7 +22,7 @@ class TikTokenizer:
         try:
             bpe_ranks = {}
             with open(
-                small_llm.get_path_to_merges_file(), "r", encoding="utf-8"
+                small_llm.get_path_to_merges_file(), encoding="utf-8"
             ) as file:
                 for idx, line in enumerate(file):
                     if line.startswith("#") or not line.strip():
@@ -36,7 +35,7 @@ class TikTokenizer:
             print(e)
 
         def separate_to_pairs(
-            unicode_chars: list,
+            unicode_chars: list[str],
         ) -> list[tuple[Any, Any]]:  # sepatere to pairs for BPE
             pairs_arr = []
             i = 0
@@ -46,7 +45,9 @@ class TikTokenizer:
                 i += 1
             return pairs_arr
 
-        def get_higher_priority(pairs_arr: list) -> tuple[Any, Any] | None:
+        def get_higher_priority(
+            pairs_arr: list[tuple[Any, Any]],
+        ) -> tuple[Any, Any] | None:
             best_pair = None
             best_rank = float("inf")
             for pair in pairs_arr:
@@ -63,8 +64,10 @@ class TikTokenizer:
             if higher is None:
                 break
             for i in range(len(new_word_arr)):
-                if (new_word_arr[i] == higher[0]
-                        and new_word_arr[i + 1] == higher[1]):
+                if (
+                    new_word_arr[i] == higher[0]
+                    and new_word_arr[i + 1] == higher[1]
+                ):
                     new_word_arr[i] = higher[0] + higher[1]
                     new_word_arr.pop(i + 1)
                     break
@@ -95,7 +98,7 @@ class TikTokenizer:
             char = inverted_vocab.get(token)
             if char is not None:
                 chars.append(char)
-                
+
         text = []
         for c in "".join(chars):
             if c == "Ġ":
@@ -112,7 +115,6 @@ class TikTokenizer:
 
 if __name__ == "__main__":
     small_llm = Small_LLM_Model()
-    # print(small_llm.get_path_to_vocab_file())
     tiktik = TikTokenizer()
     text = " hi hi"
     res_enc = tiktik.encode(small_llm, text)

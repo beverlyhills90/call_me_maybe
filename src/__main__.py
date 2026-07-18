@@ -1,13 +1,18 @@
-import numpy as np
-from llm_sdk import Small_LLM_Model
-import src.json_part as jp
-from src.arguments_generators_pack import str_generator, bool_generate
-from src.arguments_generators_pack import number_generate
-from src.cli_parsing import cli_parsing_main, CLIExeption
-import src.promts as promts
-from src.promts import Trie
-from typing import cast
 from json import JSONDecodeError
+from typing import Any, cast
+
+import numpy as np
+
+import src.json_part as jp
+import src.promts as promts
+from llm_sdk import Small_LLM_Model
+from src.arguments_generators_pack import (
+    bool_generate,
+    number_generate,
+    str_generator,
+)
+from src.cli_parsing import CLIExeption, cli_parsing_main
+from src.promts import Trie
 
 arguments_types_machine = {
     "number": number_generate,
@@ -19,14 +24,27 @@ arguments_types_promts = {
     "number": promts.ARGUMENT_PROMPT_TEMPLATE_NUM,
     "string": promts.ARGUMENT_PROMPT_TEMPLATE_STR,
     "boolean": promts.ARGUMENT_PROMPT_TEMPLATE_BOOL,
-    "integer":promts.ARGUMENT_PROMPT_TEMPLATE_NUM
+    "integer": promts.ARGUMENT_PROMPT_TEMPLATE_NUM,
 }
 
 
-# function Name Generator
 def name_generator(
     prefix_trie: "Trie", small_llm: "Small_LLM_Model", promt_tokenst: list[int]
 ) -> list[int]:
+    """Generates a valid function name token by token using a prefix
+    trie constrained search.
+
+    Args:
+        prefix_trie: The trie structure containing all valid
+        function names.
+        small_llm: The language model instance used to extract
+        next-token logits.
+        promt_tokenst: A list of token IDs representing the current
+        prompt context.
+
+    Returns:
+        A list of generated token IDs that form a complete valid
+        function name."""
     node = prefix_trie.root
     res = []
 
@@ -45,11 +63,33 @@ def name_generator(
 
 def arguments_generator(
     small_llm: "Small_LLM_Model",
-    arguments_list: list[tuple],
+    arguments_list: list[tuple[Any, Any]],
     function_desc: tuple[str, str],
     user_req: str,
 ) -> list[int] | None:
-    """wraper for arguments generators"""
+    """Wrapper function that orchestrates token generation
+    for a list of function arguments.
+
+    Constructs appropriate prompts for each expected parameter
+    type and processes
+    them sequentially using target type-specific generation
+    strategies.
+
+    Args:
+        small_llm: The language model instance used to encode contexts
+        and generate tokens.
+        arguments_list: A list of tuples containing the name and type for
+        each expected argument.
+        function_desc: A tuple containing the function name
+        and its text description.
+        user_req: The original natural language
+        request from the user.
+
+    Returns:
+        A list of all generated token IDs representing the
+        JSON block of parsed arguments,
+        or None if an unsupported data type is encountered or
+        generation fails."""
     result = []
     result.append(small_llm.encode("{")[0][0].item())
 
@@ -82,7 +122,8 @@ def arguments_generator(
         promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
         is_last = arg == arguments_list[-1]
         param_tokens = generator_func(
-            small_llm, promt_for_selector, arg_name, is_last)
+            small_llm, promt_for_selector, arg_name, is_last
+        )
         if param_tokens is None:
             return None
         result.extend(param_tokens)
@@ -90,8 +131,30 @@ def arguments_generator(
 
 
 def func_promt_generator(
-    small_llm: "Small_LLM_Model", func_list: list[tuple], user_request: str
+    small_llm: "Small_LLM_Model",
+    func_list: list[tuple[Any, Any]],
+    user_request: str,
 ) -> list[int]:
+    """Generates the localized prompt tokens for selecting
+    the single best function match.
+
+    Formats a classification template using a list of available
+    functions and their descriptions,
+    then encodes the resulting prompt string into a sequence of
+    language model token IDs.
+
+    Args:
+        small_llm: The language model instance used to encode the
+        final prompt string.
+        func_list: A list of tuples containing the name and description
+        of each available function.
+        user_request: The raw natural language input representing
+        the user's intent.
+
+    Returns:
+        A list of token IDs representing the complete
+        formatted choice prompt.
+    """
     FUNCTION_CHOOSE_TEMPLATE = """
 
     You must choose exactly one function from the
@@ -127,7 +190,7 @@ def func_promt_generator(
     return cast(list[int], tokens)
 
 
-def from_dict_to_list(target_dict: dict) -> list[tuple]:
+def from_dict_to_list(target_dict: dict[str, Any]) -> list[tuple[Any, Any]]:
     """Converts a dictionary of parameters into a
     list of tuples of the form (name, type)."""
     res = []
@@ -163,7 +226,7 @@ def main() -> None:
     print("T-3000 working on your promts")
     i: int = 0
     for request in user_input:
-        crasota = f"[{"=" * (i * 10)}{" " * ((len(user_input) - i) * 10)}]"
+        crasota = f"[{'=' * (i * 10)}{' ' * ((len(user_input) - i) * 10)}]"
         print(crasota, end="\r", flush=True)
         target_name = small_llm.decode(
             name_generator(
@@ -186,7 +249,9 @@ def main() -> None:
         if args is None:
             return
         decoded = small_llm.decode(args)
-        jp.write_to_file(cli.output, target_name, request, decoded)
+        jp.write_to_file(
+            cli.output, target_name, request, decoded, func_obj.parameters
+        )
 
         i += 1
 

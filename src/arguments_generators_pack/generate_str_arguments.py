@@ -1,6 +1,9 @@
-import numpy as np
 from enum import Enum
+
+import numpy as np
+
 from llm_sdk import Small_LLM_Model
+
 from .utils import get_vocab_list
 
 
@@ -31,13 +34,11 @@ def str_generator(
 
     term = "}" if is_last else ","
     term_id = vocab.get(term)
-    string_allowed_ids = [
-        id for token, id in vocab.items() if '"' not in token or token == '"'
-    ]
+    string_allowed_ids = [id for token, id in vocab.items()
+                          if '"' not in token]
 
     state = STATE.START_STR
     while state != STATE.END_STR:
-
         allowed_tokenids = []
         if state == STATE.START_STR:
             allowed_tokenids = [quote_id]

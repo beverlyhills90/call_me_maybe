@@ -296,17 +296,6 @@ decode() — reverse pipeline:
   Output: "hello world"
 ```
 
-### Safe Math Evaluation
-
-If the model generates a simple arithmetic expression as a numeric argument (e.g. `8 - 0` instead of `8`), the system evaluates it safely using Python's `ast` module — supporting `+`, `-`, `*`, `/`. This handles edge cases where the model produces expressions rather than plain numbers, without using `eval()`.
-
-Example:
-```
-model output: "8 - 0"  →  safe_eval_math()  →  8
-model output: "3 * 4"  →  safe_eval_math()  →  12
-model output: "hello"  →  safe_eval_math()  →  "hello"  (unchanged)
-```
-
 ---
 
 ## Resources

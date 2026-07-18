@@ -30,7 +30,7 @@ def cli_parsing_main() -> Any:
         "--input",
         "-i",
         type=Path,
-        default=Path("data/input/test_1.json"),
+        default=Path("data/input/function_calling_tests.json"),
         required=False,
     )
     parser.add_argument(

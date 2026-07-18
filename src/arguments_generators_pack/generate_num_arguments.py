@@ -1,6 +1,9 @@
-import numpy as np
-from llm_sdk import Small_LLM_Model
 from enum import Enum
+
+import numpy as np
+
+from llm_sdk import Small_LLM_Model
+
 from .utils import get_vocab_list, softmax
 
 
@@ -30,6 +33,7 @@ def number_generate(
         vocab = get_vocab_list(small_llm)
     except OSError:
         return None
+
     term_id = vocab.get(term)
     minus_id = vocab.get("-")
     digit_allowed_ids = []
@@ -48,8 +52,8 @@ def number_generate(
             allowed_tokenids = digit_allowed_ids + [minus_id]  # type: ignore
             allowed_tokenids.extend(null_ids)
         elif state == STATE.AFTER_MINUS or state == STATE.JUST_NUMBERS:
-            allowed_tokenids = digit_allowed_ids + [
-                term_id, minus_id]  # type: ignore
+            allowed_tokenids = digit_allowed_ids + [term_id,    # type: ignore
+                                                    minus_id]  # type: ignore
 
         logits = small_llm.get_logits_from_input_ids(promt_tokenst)
         mask = np.full(len(logits), -np.inf)
