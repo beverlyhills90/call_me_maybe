@@ -219,7 +219,7 @@ def main() -> None:
     prefix_trie = Trie.to_trie(all_funcs_names, small_llm)
     try:
         user_input = jp.parsing_promts(cli.input)
-    except (JSONDecodeError, FileNotFoundError) as e:
+    except (JSONDecodeError, FileNotFoundError,ValueError) as e:
         print(e)
         return
 
