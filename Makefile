@@ -15,13 +15,12 @@ debug:
 	$(PYTHON) -m pdb src/__main__.py
 
 clean:
-	rm -rf __pycache__ .mypy_cache .pytest_cache
+	rm -rf __pycache__ .mypy_cache .pytest_cache .ruff_cache
 	find . -type d -name "__pycache__" -exec rm -r {} +
 
 lint:
-	
-	uv run mypy . --exclude .venv --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
-	uv run flake8 . --exclude=.venv
+	uv run mypy . --exclude '(\.venv|llm_sdk)' --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	uv run flake8 . --exclude=.venv,llm_sdk
 format:
-	ruff format .
-	ruff check --fix .
+	uv run ruff format .
+	uv run ruff check --fix .

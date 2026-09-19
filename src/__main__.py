@@ -4,15 +4,15 @@ from typing import Any, cast
 import numpy as np
 
 import src.json_part as jp
-import src.promts as promts
+import src.prompts as prompts
 from llm_sdk import Small_LLM_Model
 from src.arguments_generators_pack import (
     bool_generate,
     number_generate,
     str_generator,
 )
-from src.cli_parsing import CLIExeption, cli_parsing_main
-from src.promts import Trie
+from src.cli_parsing import CLIException, cli_parsing_main
+from src.prompts import Trie
 
 arguments_types_machine = {
     "number": number_generate,
@@ -20,16 +20,16 @@ arguments_types_machine = {
     "boolean": bool_generate,
     "integer": number_generate,
 }
-arguments_types_promts = {
-    "number": promts.ARGUMENT_PROMPT_TEMPLATE_NUM,
-    "string": promts.ARGUMENT_PROMPT_TEMPLATE_STR,
-    "boolean": promts.ARGUMENT_PROMPT_TEMPLATE_BOOL,
-    "integer": promts.ARGUMENT_PROMPT_TEMPLATE_NUM,
+arguments_types_prompts = {
+    "number": prompts.ARGUMENT_PROMPT_TEMPLATE_NUM,
+    "string": prompts.ARGUMENT_PROMPT_TEMPLATE_STR,
+    "boolean": prompts.ARGUMENT_PROMPT_TEMPLATE_BOOL,
+    "integer": prompts.ARGUMENT_PROMPT_TEMPLATE_NUM,
 }
 
 
 def name_generator(
-    prefix_trie: "Trie", small_llm: "Small_LLM_Model", promt_tokenst: list[int]
+    prefix_trie: "Trie", small_llm: "Small_LLM_Model", prompt_tokens: list[int]
 ) -> list[int]:
     """Generates a valid function name token by token using a prefix
     trie constrained search.
@@ -39,7 +39,7 @@ def name_generator(
         function names.
         small_llm: The language model instance used to extract
         next-token logits.
-        promt_tokenst: A list of token IDs representing the current
+        prompt_tokens: A list of token IDs representing the current
         prompt context.
 
     Returns:
@@ -49,13 +49,13 @@ def name_generator(
     res = []
 
     while prefix_trie.get_name(node) is None:
-        logits = small_llm.get_logits_from_input_ids(promt_tokenst)
+        logits = small_llm.get_logits_from_input_ids(prompt_tokens)
         allowed_ids = prefix_trie.get_ids(node)
         mask = np.full(len(logits), -np.inf)
         mask[allowed_ids] = 0
         masked_logits = logits + mask
         next_token_id = int(np.argmax(masked_logits))
-        promt_tokenst.append(next_token_id)
+        prompt_tokens.append(next_token_id)
         res.append(next_token_id)
         node = node.children[next_token_id]
     return res
@@ -105,24 +105,25 @@ def arguments_generator(
         if generator_func is None:
             return
         if "regex" in function_desc[0]:
-            promt_for_arg = promts.ARGUMENT_PROMPT_TEMPLATE_STR_REGEX
+            prompt_for_arg = prompts.ARGUMENT_PROMPT_TEMPLATE_STR_REGEX
         else:
             try:
-                promt_for_arg = arguments_types_promts[arg_type]
+                prompt_for_arg = arguments_types_prompts[arg_type]
             except KeyError as e:
                 print(f"{e}:We don't support this data type")
                 continue
-        arguments_promt_str = promt_for_arg.format(
+        arguments_prompt_str = prompt_for_arg.format(
             arg_name=arg_name,
             function_name=function_desc[0],
             function_description=function_desc[1],
             parameters_description=all_args_str,
             user_request=user_req,
         )
-        promt_for_selector = small_llm.encode(arguments_promt_str)[0].tolist()
+        encoded_prompt = small_llm.encode(arguments_prompt_str)
+        prompt_for_selector = encoded_prompt[0].tolist()
         is_last = arg == arguments_list[-1]
         param_tokens = generator_func(
-            small_llm, promt_for_selector, arg_name, is_last
+            small_llm, prompt_for_selector, arg_name, is_last
         )
         if param_tokens is None:
             return None
@@ -130,7 +131,7 @@ def arguments_generator(
     return result
 
 
-def func_promt_generator(
+def func_prompt_generator(
     small_llm: "Small_LLM_Model",
     func_list: list[tuple[Any, Any]],
     user_request: str,
@@ -204,8 +205,8 @@ def main() -> None:
     """main()"""
     try:
         cli = cli_parsing_main()
-    except CLIExeption as e:
-        print(f"Somtehing wrong with arguments: {e}")
+    except CLIException as e:
+        print(f"Something wrong with arguments: {e}")
         return
     small_llm = Small_LLM_Model()
     try:
@@ -215,15 +216,15 @@ def main() -> None:
         return
     all_funcs_names = [obj.name for obj in func_list]
     func_descriptions = [obj.description for obj in func_list]
-    func_tuples = list(zip(all_funcs_names, func_descriptions))
+    func_tuples = list(zip(all_funcs_names, func_descriptions, strict=True))
     prefix_trie = Trie.to_trie(all_funcs_names, small_llm)
     try:
-        user_input = jp.parsing_promts(cli.input)
-    except (JSONDecodeError, FileNotFoundError,ValueError) as e:
+        user_input = jp.parsing_prompts(cli.input)
+    except (JSONDecodeError, FileNotFoundError, ValueError) as e:
         print(e)
         return
 
-    print("T-3000 working on your promts")
+    print("T-3000 working on your prompts")
     i: int = 0
     for request in user_input:
         crasota = f"[{'=' * (i * 10)}{' ' * ((len(user_input) - i) * 10)}]"
@@ -232,7 +233,7 @@ def main() -> None:
             name_generator(
                 prefix_trie,
                 small_llm,
-                func_promt_generator(small_llm, func_tuples, request),
+                func_prompt_generator(small_llm, func_tuples, request),
             )
         )
         for func_obj in func_list:

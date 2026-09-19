@@ -16,7 +16,7 @@ dependencies = [
 dev = ["flake8", "mypy", "ruff", "ty", "pytest"]
 
 [project.scripts]
-call_me_maybe = "src.cli:main"
+call_me_maybe = "src.__main__:main"
 
 [build-system]
 requires = ["setuptools>=80"]
@@ -26,7 +26,8 @@ build-backend = "setuptools.build_meta"
 include = ["src*", "llm_sdk*"]
 
 [tool.ruff]
-line-length = 80
+extend-exclude = ["llm_sdk"]
+line-length = 79
 target-version = "py310"
 
 [tool.ruff.lint]
@@ -51,3 +52,6 @@ disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+[[tool.mypy.overrides]]
+module = ["llm_sdk", "llm_sdk.*"]
+ignore_errors = true

@@ -36,7 +36,7 @@ class TikTokenizer:
 
         def separate_to_pairs(
             unicode_chars: list[str],
-        ) -> list[tuple[Any, Any]]:  # sepatere to pairs for BPE
+        ) -> list[tuple[Any, Any]]:  # separate into pairs for BPE
             pairs_arr = []
             i = 0
             while i < (len(unicode_chars) - 1):
@@ -72,26 +72,26 @@ class TikTokenizer:
                     new_word_arr.pop(i + 1)
                     break
 
-        tokinized = []
+        tokenized = []
         try:
             vocab = get_vocab_list(small_llm=small_llm)
 
             for token in new_word_arr:
                 token_id = vocab.get(token)
                 if token_id is not None:
-                    tokinized.append(int(token_id))
+                    tokenized.append(int(token_id))
 
-        except OSError:
-            raise Exception("NO ACCES TO VOCAB lol")
-        return tokinized
+        except OSError as e:
+            raise Exception("No access to vocab") from e
+        return tokenized
 
     @staticmethod
     def decode(small_llm: "Small_LLM_Model", tokenids_list: list[int]) -> str:
         try:
             vocab = get_vocab_list(small_llm=small_llm)
             inverted_vocab = {v: k for k, v in vocab.items()}
-        except OSError:
-            raise Exception("NO ACCES TO VOCAB lol")
+        except OSError as e:
+            raise Exception("No access to vocab") from e
 
         chars = []
         for token in tokenids_list:

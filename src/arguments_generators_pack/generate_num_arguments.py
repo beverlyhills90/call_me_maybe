@@ -16,7 +16,7 @@ class STATE(Enum):
 
 def number_generate(
     small_llm: "Small_LLM_Model",
-    promt_tokenst: list[int],
+    prompt_tokens: list[int],
     name_param: str,
     is_last: bool,
 ) -> list[int] | None:
@@ -27,7 +27,7 @@ def number_generate(
 
     name_tokens = [t.item() for t in small_llm.encode(formatted_name)[0]]
     res.extend(name_tokens)
-    promt_tokenst.extend(name_tokens)
+    prompt_tokens.extend(name_tokens)
     term = "}" if is_last else ","
     try:
         vocab = get_vocab_list(small_llm)
@@ -52,15 +52,15 @@ def number_generate(
             allowed_tokenids = digit_allowed_ids + [minus_id]  # type: ignore
             allowed_tokenids.extend(null_ids)
         elif state == STATE.AFTER_MINUS or state == STATE.JUST_NUMBERS:
-            allowed_tokenids = digit_allowed_ids + [term_id,    # type: ignore
-                                                    minus_id]  # type: ignore
+            allowed_tokenids = digit_allowed_ids + [term_id]  # type: ignore
+            allowed_tokenids.append(minus_id)  # type: ignore
 
-        logits = small_llm.get_logits_from_input_ids(promt_tokenst)
+        logits = small_llm.get_logits_from_input_ids(prompt_tokens)
         mask = np.full(len(logits), -np.inf)
         mask[allowed_tokenids] = 0
         masked_logits = logits + mask
         next_token_id = int(np.argmax(softmax(masked_logits)))
-        promt_tokenst.append(next_token_id)
+        prompt_tokens.append(next_token_id)
         res.append(next_token_id)
 
         if state == STATE.START_NUMS:

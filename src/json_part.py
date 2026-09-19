@@ -21,13 +21,13 @@ class Prompt(BaseModel):
     prompt: str = Field(min_length=1)
 
 
-def parsing_promts(file_path: str) -> list[str]:
-    """Paras user promts
+def parsing_prompts(file_path: str) -> list[str]:
+    """Parse user prompts
 
     ARGS:
-    file_path - path to the file with user promts
+    file_path - path to the file with user prompts
 
-    Raises: json.JSONDecodeError,FileNotFoundError
+    Raises: ValueError, FileNotFoundError
     """
     current_dir = Path(__file__).resolve().parent.parent
     ret_list = []
@@ -36,16 +36,16 @@ def parsing_promts(file_path: str) -> list[str]:
         with open(json_path, encoding="utf-8") as file:
             data = json.load(file)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in {file_path}: {e}")
-    except FileNotFoundError:
-        raise FileNotFoundError(f"File not found: {file_path}")
+        raise ValueError(f"Invalid JSON in {file_path}: {e}") from e
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File not found: {file_path}") from e
 
-    for promt in data:
+    for prompt in data:
         try:
-            validated = Prompt.model_validate(promt)
+            validated = Prompt.model_validate(prompt)
             ret_list.append(validated.prompt)
         except ValidationError:
-            print(f"Validation Error in promt: {list(promt.values())[0]}")
+            print(f"Validation Error in prompt: {list(prompt.values())[0]}")
     return ret_list
 
 
@@ -54,7 +54,7 @@ def list_objects(file_path: str) -> list["Function"]:
     ARG:
     file_path - path to the file with function definitions
 
-    Raises: Exeption
+    Raises: ValueError, FileNotFoundError, ValidationError
     """
     current_dir = Path(__file__).resolve().parent.parent
     ret_list = []
@@ -64,9 +64,9 @@ def list_objects(file_path: str) -> list["Function"]:
         with open(json_path, encoding="utf-8") as file:
             data = json.load(file)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in {file_path}: {e}")
-    except FileNotFoundError:
-        raise FileNotFoundError(f"File not found: {file_path}")
+        raise ValueError(f"Invalid JSON in {file_path}: {e}") from e
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File not found: {file_path}") from e
 
     for func in data:
         ret_list.append(Function.model_validate(func))

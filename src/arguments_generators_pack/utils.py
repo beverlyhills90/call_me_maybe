@@ -13,9 +13,8 @@ def get_vocab_list(small_llm: "Small_LLM_Model") -> dict[str, int]:
         with open(json_path, encoding="utf-8") as file:
             data = json.load(file)
         return cast(dict[str, int], data)
-    except OSError:
-        raise OSError("Something went worng with the vocab.json")
-        print("Something went worng with the vocab.json")
+    except OSError as e:
+        raise OSError("Something went wrong with the vocab.json") from e
 
 
 def softmax(x: Any) -> Any:
