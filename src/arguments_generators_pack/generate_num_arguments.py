@@ -1,4 +1,5 @@
 from enum import Enum
+from functools import lru_cache
 
 import numpy as np
 
@@ -12,6 +13,23 @@ class STATE(Enum):
     AFTER_MINUS = 2
     JUST_NUMBERS = 3
     END_NUMS = 4
+
+
+@lru_cache(maxsize=None)
+def get_number_token_ids(
+    small_llm: "Small_LLM_Model",
+) -> tuple[list[int], list[int]]:
+    """Return (digit token ids, null token ids), computed once per model"""
+    vocab = get_vocab_list(small_llm)
+    digit_allowed_ids = []
+    null_ids = [id for token, id in vocab.items() if token.strip() == "null"]
+    for token, id in vocab.items():
+        clean_token = token.replace(" ", "").replace("Ġ", "").strip()
+        if not clean_token:
+            continue
+        if all(c in " 0123456789." for c in clean_token):
+            digit_allowed_ids.append(id)
+    return digit_allowed_ids, null_ids
 
 
 def number_generate(
@@ -36,14 +54,7 @@ def number_generate(
 
     term_id = vocab.get(term)
     minus_id = vocab.get("-")
-    digit_allowed_ids = []
-    null_ids = [id for token, id in vocab.items() if token.strip() == "null"]
-    for token, id in vocab.items():
-        clean_token = token.replace(" ", "").replace("Ġ", "").strip()
-        if not clean_token:
-            continue
-        if all(c in " 0123456789." for c in clean_token):
-            digit_allowed_ids.append(id)
+    digit_allowed_ids, null_ids = get_number_token_ids(small_llm)
 
     state = STATE.START_NUMS
     while state != STATE.END_NUMS:

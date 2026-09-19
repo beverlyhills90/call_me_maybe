@@ -41,11 +41,6 @@ def cli_parsing_main() -> Any:
     )
 
     args = parser.parse_args()
-    if len(vars(args)) > 3:
-        raise CLIException("Need something more")
-    elif len(vars(args)) < 3:
-        raise CLIException("Too much args")
-
     for name, value in vars(args).items():
         if value is None:
             raise CLIException(f"Argument -{name} is missing!")
